@@ -1,0 +1,5 @@
+# black
+pre-commit
+mypy
+flake8
+tensorflow-gpu>=1.8
