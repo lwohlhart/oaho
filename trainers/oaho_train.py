@@ -3,6 +3,7 @@ import tensorflow as tf
 from models.oaho_model import OAHOModel
 from data_loader.oaho_loader import TFRecordDataLoader
 from typing import Callable
+import os
 
 
 class OAHOTrainer(BaseTrain):
@@ -47,7 +48,7 @@ class OAHOTrainer(BaseTrain):
         run_config = run_config.replace(model_dir=self.config["job_dir"])
 
         warm_start = None
-        if 'warm_start_dir' in self.config:
+        if 'warm_start_dir' in self.config and os.path.exists(self.config['warm_start_dir']):
             warm_start = self.config['warm_start_dir']
             
         # intialise the estimator with your model
