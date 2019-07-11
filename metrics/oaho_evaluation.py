@@ -174,9 +174,7 @@ class OAHODetectionEvaluator(object):
           groundtruth_grasps = [Grasp(g[0:2], g[2], g[3]/2.0, g[3]) for g in eval_pack['groundtruth_grasps']]
           groundtruth_bbs = [g.as_bb for g in groundtruth_grasps]
 
-          dt_w = 60
-          dt_l = dt_w / 2.0
-          detected_grasps = [Grasp(g[0:2], g[2], dt_l, dt_w) for g in eval_pack['detected_grasps']]
+          detected_grasps = [Grasp(g[0:2], g[2], g[3]/2.0, g[3]) for g in eval_pack['detected_grasps']]
 
           max_iou_per_detected_grasp = [g.max_iou(groundtruth_bbs) for g in detected_grasps]
           if (np.array(max_iou_per_detected_grasp) > 0.25).any():
