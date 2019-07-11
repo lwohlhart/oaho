@@ -1,5 +1,4 @@
-from data_loader.oaho_loader import TFRecordDataLoader, TFGraspConfigurationRecordDataLoader
-from models.oaho_model import OAHOModel
+from data_loader.oaho_loader import TFRecordDataLoader
 from trainers.oaho_train import OAHOTrainer
 from utils.utils import get_args, process_config
 
@@ -19,11 +18,11 @@ def init() -> None:
     # initialise model
     model = OAHOModel(config)
     # create your data generators for each mode
-    train_data = TFGraspConfigurationRecordDataLoader(config, mode="train")
+    train_data = TFRecordDataLoader(config, mode="train")
 
-    val_data = TFGraspConfigurationRecordDataLoader(config, mode="val")
+    val_data = TFRecordDataLoader(config, mode="val")
 
-    test_data = TFGraspConfigurationRecordDataLoader(config, mode="test")
+    test_data = TFRecordDataLoader(config, mode="test")
 
     # initialise the estimator
     trainer = OAHOTrainer(config, model, train_data, val_data, test_data)

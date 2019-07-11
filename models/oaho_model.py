@@ -196,7 +196,7 @@ class OAHOModel(BaseModel):
         # stack and return 2D coordinates
         grasp_center = tf.stack((argmax_x, argmax_y), axis=1)
         grasp_angle = tf.batch_gather(tf.reshape(angle_avg, (b, -1,d)), argmax)#, tf.expand_dims(argmax,-1))   #tf.gather_nd(tf.transpose(angle, [1,2,0,3]), grasp_center)
-        grasp_width = tf.batch_gather(tf.reshape(width_avg, (b, -1,d)), argmax)#, tf.expand_dims(argmax,-1))
+        grasp_width = 150.0 * tf.batch_gather(tf.reshape(width_avg, (b, -1,d)), argmax)#, tf.expand_dims(argmax,-1))
 
         detection_grasps = tf.concat([tf.cast(grasp_center,tf.float32), grasp_angle, grasp_width], axis=1)
         detection_grasps = tf.reshape(detection_grasps, (b, -1, 4))
