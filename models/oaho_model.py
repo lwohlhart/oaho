@@ -72,7 +72,7 @@ class OAHOModel(BaseModel):
 
         angle = 0.5 * tf.atan2(sin_output, cos_output)
 
-        loss = seg_loss + quality_loss + sin_loss + cos_loss # + width_loss
+        loss = seg_loss + quality_loss + sin_loss + cos_loss + width_loss
 
         # TODO: update summaries for tensorboard
         segmentations_class_colors = tf.convert_to_tensor([[0, 0, 0], [255, 0, 0], [0, 255, 0], [0, 0, 255]], dtype=tf.uint8)
@@ -85,12 +85,19 @@ class OAHOModel(BaseModel):
         tf.summary.scalar('width_loss', width_loss)
         tf.summary.scalar('loss', loss)
 
+        gaussian_blur_kernel = gaussian_kernel(5,0.0,1.0)
+        gaussian_blur_kernel = gaussian_blur_kernel[:,:,tf.newaxis, tf.newaxis]
+        quality = tf.sigmoid(pos_output)
+        quality = tf.nn.conv2d(quality, gaussian_blur_kernel, [1,1,1,1], 'SAME')
+        
+
         images = {
             'input': tf.summary.image('input', features['input']),
             'segmentation': tf.summary.image('segmentation', segmentation_image),
-            'quality': tf.summary.image('quality', tf.sigmoid(pos_output)),
+            'quality': tf.summary.image('quality', quality),
             'angle_sin': tf.summary.image('angle_sin', sin_output),
             'angle_cos': tf.summary.image('angle_cos', cos_output),
+            'width': tf.summary.image('width', width_output),
             'angle': tf.summary.image('angle', angle)
         }
 
@@ -110,9 +117,9 @@ class OAHOModel(BaseModel):
             }
             # summaries_dict.update(images)
             # summaries_dict.update(get_estimator_eval_metric_ops)
-            b = tf.shape(pos_output)[0]
+            b = tf.shape(quality)[0]
 
-            detection_grasps = self._create_detection_head(pos_output, angle, width_output)
+            detection_grasps = self._create_detection_head(quality, angle, width_output)
 
             detection_evaluator = OAHODetectionEvaluator()
             detection_visualizer = OAHODetectionVisualizer()
@@ -166,14 +173,7 @@ class OAHOModel(BaseModel):
 
 
     @staticmethod
-    def _create_detection_head(quality: tf.Tensor, angle: tf.Tensor, width: tf.Tensor) -> tf.Tensor:
-
-        def gaussian_kernel(size: int, mean: float, std: float):
-            """Makes 2D gaussian Kernel for convolution."""
-            d = tf.distributions.Normal(mean, std)
-            vals = d.prob(tf.range(start = -size, limit = size + 1, dtype = tf.float32))
-            gauss_kernel = tf.einsum('i,j->ij', vals, vals)
-            return gauss_kernel / tf.reduce_sum(gauss_kernel)
+    def _create_detection_head(quality: tf.Tensor, angle: tf.Tensor, width: tf.Tensor) -> tf.Tensor:        
 
         # b,h,w,d = pos_output.shape
         # quality = 
@@ -203,8 +203,7 @@ class OAHOModel(BaseModel):
         return detection_grasps
 
 
-    @staticmethod
-    def _create_model(x: tf.Tensor, is_training: bool) -> tf.Tensor:
+    def _create_model(self, x: tf.Tensor, is_training: bool) -> tf.Tensor:
         """
         Implement the architecture of your model
         :param x: input data
@@ -221,6 +220,9 @@ class OAHOModel(BaseModel):
             if skip_connection is not None:
                 x = tf.keras.layers.concatenate([x, skip_connection])
             return x
+
+
+        tf.logging.info("Constructing OAHO Model")
 
         no_filters = [10, 32, 128, 512]
         filter_sizes= [(3, 3), (3, 3), (3, 3), (2, 2)]
@@ -258,3 +260,12 @@ class OAHOModel(BaseModel):
         sin_output = kl.Conv2D(1, kernel_size=2, padding='same', name='sin_out')(grasp_head)
         width_output = kl.Conv2D(1, kernel_size=2, padding='same', name='width_out')(grasp_head)
         return seg_output, pos_output, cos_output, sin_output, width_output
+
+
+
+def gaussian_kernel(size: int, mean: float, std: float):
+    """Makes 2D gaussian Kernel for convolution."""
+    d = tf.distributions.Normal(mean, std)
+    vals = d.prob(tf.range(start = -size, limit = size + 1, dtype = tf.float32))
+    gauss_kernel = tf.einsum('i,j->ij', vals, vals)
+    return gauss_kernel / tf.reduce_sum(gauss_kernel)

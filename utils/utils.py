@@ -84,6 +84,12 @@ def get_args() -> dict:
         help="Where to load previously stored checkpoints for model initialization from",
     )
 
+    parser.add_argument(
+        "--model-def",
+        type=str,
+        help="YAML file parameterizing the model builder"
+    )
+
     args, unknown = parser.parse_known_args()
 
     # Set python level verbosity

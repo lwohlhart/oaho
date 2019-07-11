@@ -20,7 +20,9 @@ TEST_FILES="data/oaho_synth_test.tfrecord"
 
 #WARM_START_DIR="out/oaho_20190704_16_28_43/"
 #WARM_START_DIR="out/oaho_20190704_17_30_03/"
-WARM_START_DIR="out/oaho_20190708_17_03_11/"
+WARM_START_DIR="out/oaho_20190711_11_50_08/"
+
+MODEL_DEF="config/model.yaml"
 
 ##########################################################
 
@@ -99,6 +101,7 @@ python3 -m initialisers.task \
         --test-files ${TEST_FILES} \
         --export-path "${OUTPUT_DIR}/exports" \
 	--warm-start-dir "${WARM_START_DIR}" \
+        --model-def "${MODEL_DEF}" \
 &>runlogs/$JOB_NAME.log & echo "$!" > runlogs/$JOB_NAME.pid
 
 echo "Job launched."

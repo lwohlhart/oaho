@@ -1,0 +1,6 @@
+architecture: 'resnet-deconv'
+filters:
+  - 10
+  - 32
+  - 100
+  - 256

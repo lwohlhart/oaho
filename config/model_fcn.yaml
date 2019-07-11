@@ -1,0 +1,6 @@
+architecture: 'fcn'
+filters:
+  - 10
+  - 32
+  - 100
+  - 256

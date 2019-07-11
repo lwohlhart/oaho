@@ -23,8 +23,7 @@ class BaseModel:
         """
         raise NotImplementedError
 
-    @staticmethod
-    def _create_model(x: tf.Tensor, is_training: bool) -> tf.Tensor:
+    def _create_model(self, x: tf.Tensor, is_training: bool) -> tf.Tensor:
         """
         Implement the architecture of your model
         :param x: input data
