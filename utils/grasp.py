@@ -176,7 +176,8 @@ class BoundingBox:
         return Grasp(self.center, self.angle, self.length/3, self.width).as_bb.polygon_coords(shape)
 
     def iou(self, bb, angle_threshold=np.pi/6):
-        if abs(self.angle - bb.angle) % np.pi > angle_threshold:
+        #if abs(self.angle - bb.angle) % np.pi > angle_threshold:
+        if abs((self.angle - bb.angle + np.pi/2) % np.pi - np.pi/2) > angle_threshold:
             return 0
 
         rr1, cc1 = self.polygon_coords()
