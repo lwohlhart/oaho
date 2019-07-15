@@ -4,13 +4,13 @@ import tensorflow.keras.layers as kl
 import grasp as grasp_util
 import cv2
 
-from data_loader.oaho_loader import TFGraspConfigurationRecordDataLoader
+from data_loader.oaho_loader import TFRecordDataLoader
 
 config = {
-  'train_files': ['data/oaho_synth_test.tfrecord'],
+  'train_files': ['data/oaho_synth_test.tfrecord', 'data/oaho_synth_test_01.tfrecord', 'data/oaho_synth_val_01.tfrecord'],
   'train_batch_size': 4
 }
-train_data = TFGraspConfigurationRecordDataLoader(config, mode='train')
+train_data = TFRecordDataLoader(config, mode='train')
 
 train_dataset = train_data.input_fn()
 train_iter = train_dataset.make_one_shot_iterator()

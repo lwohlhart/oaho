@@ -14,13 +14,15 @@ prefix="oaho"
 now=$(date +"%Y%m%d_%H_%M_%S")
 JOB_NAME="$prefix"_"$now"
 # locations locally or on the cloud for your files
-TRAIN_FILES="data/oaho_synth_train.tfrecord"
-EVAL_FILES="data/oaho_synth_val.tfrecord"
-TEST_FILES="data/oaho_synth_test.tfrecord"
+TRAIN_FILES="data/oaho_synth_train*.tfrecord"
+EVAL_FILES="data/oaho_synth_val*.tfrecord"
+TEST_FILES="data/oaho_synth_test*.tfrecord"
 
 #WARM_START_DIR="out/oaho_20190704_16_28_43/"
 #WARM_START_DIR="out/oaho_20190704_17_30_03/"
-WARM_START_DIR="out/oaho_20190711_11_50_08/"
+#WARM_START_DIR="out/oaho_20190711_11_50_08/"
+WARM_START_DIR="out/oaho_20190711_17_06_50/"
+
 
 MODEL_DEF="config/model.yaml"
 
