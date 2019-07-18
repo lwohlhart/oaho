@@ -109,3 +109,4 @@ venv.bak/
 data/*.tfrecord
 out
 config/model.yaml
+mprofile_*.dat

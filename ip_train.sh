@@ -3,9 +3,9 @@
 # where to write tfevents
 OUTPUT_DIR="out"
 # experiment settings
-TRAIN_BATCH=4 # 8
-EVAL_BATCH=4 # 8
-BATCH=4 # 8
+TRAIN_BATCH=6 #4 # 8
+EVAL_BATCH=6 #4 # 8
+BATCH=6 #4 # 8
 
 LR=0.0001
 EPOCHS=1000
@@ -14,12 +14,13 @@ prefix="oaho"
 now=$(date +"%Y%m%d_%H_%M_%S")
 JOB_NAME="$prefix"_"$now"
 # locations locally or on the cloud for your files
-TRAIN_FILES="data/oaho_synth_train.tfrecord"
-EVAL_FILES="data/oaho_synth_val.tfrecord"
-TEST_FILES="data/oaho_synth_test.tfrecord"
+TRAIN_FILES="data/oaho_synth_train*.tfrecord"
+EVAL_FILES="data/oaho_synth_val*.tfrecord"
+TEST_FILES="data/oaho_synth_test*.tfrecord"
 
 WARM_START_DIR="out/oaho_20190708_17_03_11/"
 
+MODEL_DEF="config/model.yaml"
 ##########################################################
 
 if [[ -z $1 && -z $2 ]]; then
@@ -86,7 +87,7 @@ fi
 
 # start training
 CUDA_VISIBLE_DEVICES="$GPU_ID"
-ipython -i initialisers/task.py -- \
+mprof run ipython -i initialisers/task.py -- \
         --job-dir ${JOB_DIR} \
         --train-batch-size ${BATCH} \
         --eval-batch-size ${BATCH} \
@@ -96,7 +97,8 @@ ipython -i initialisers/task.py -- \
         --eval-files ${EVAL_FILES} \
         --test-files ${TEST_FILES} \
         --export-path "${OUTPUT_DIR}/exports" \
-	--warm-start-dir "${WARM_START_DIR}" #\
+	--warm-start-dir "${WARM_START_DIR}" \
+        --model-def "${MODEL_DEF}"
 #&>runlogs/$JOB_NAME.log & echo "$!" > runlogs/$JOB_NAME.pid
 
 echo "Job launched."
