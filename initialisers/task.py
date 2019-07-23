@@ -1,7 +1,7 @@
 from data_loader.oaho_loader import TFRecordDataLoader
 from models.oaho_model_factory import oaho_model_from_config
 from trainers.oaho_train import OAHOTrainer
-from utils.utils import get_args, process_config
+from utils.task_utils import get_args, process_config
 
 
 def init() -> None:

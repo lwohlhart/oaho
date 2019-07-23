@@ -35,6 +35,9 @@ def get_args() -> dict:
         "--train-batch-size", help="Batch size for training steps", type=int, default=32
     )
     parser.add_argument(
+        "--train-shuffle-buffer-size", help="Shuffle buffer size for training steps", type=int, default=1000
+    )
+    parser.add_argument(
         "--eval-batch-size",
         help="Batch size for evaluation steps",
         type=int,
