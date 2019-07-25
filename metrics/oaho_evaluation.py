@@ -171,10 +171,10 @@ class OAHODetectionEvaluator(object):
             tf.logging.warning('Skipping evaluation of image id %s detection missing', image_id)
             continue
           
-          groundtruth_grasps = [Grasp(g[0:2], g[2], g[3]/2.0, g[3]) for g in eval_pack['groundtruth_grasps']]
+          groundtruth_grasps = [Grasp((g[1], g[0]), g[2], g[3], g[3]/2.0) for g in eval_pack['groundtruth_grasps']]
           groundtruth_bbs = [g.as_bb for g in groundtruth_grasps]
 
-          detected_grasps = [Grasp(g[0:2], g[2], g[3]/2.0, g[3]) for g in eval_pack['detected_grasps']]
+          detected_grasps = [Grasp((g[1], g[0]), g[2], g[3], g[3]/2.0) for g in eval_pack['detected_grasps']]
 
           max_iou_per_detected_grasp = [g.max_iou(groundtruth_bbs) for g in detected_grasps]
           if (np.array(max_iou_per_detected_grasp) > 0.25).any():
@@ -302,7 +302,7 @@ def ExportSingleImageGroundtruth(image_id, next_annotation_id, groundtruth_grasp
             'grasp': groundtruth_grasps[i, :]
         }
         if (groundtruth_grasps[i, 0:2] < 0).any():
-          break # continue
+            continue
         groundtruth_list.append(export_dict)
     return groundtruth_list
 

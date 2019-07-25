@@ -92,6 +92,12 @@ def get_args() -> dict:
         type=str,
         help="YAML file parameterizing the model builder"
     )
+    parser.add_argument(
+        "--grasp-annotation-format",
+        choices=["grasp_configurations", "grasp_images"],
+        default="grasp_configurations",
+        help="Specify if grasp_images are stored in dataset or if they should be generated from grasp_configurations",
+    )
 
     args, unknown = parser.parse_known_args()
 

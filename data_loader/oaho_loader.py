@@ -1,11 +1,27 @@
 from base.data_loader import DataLoader
+from utils.grasp import Grasp
 import tensorflow as tf
 import multiprocessing
 from typing import Tuple, Dict
 import random
 import numpy as np
-from skimage.draw import polygon
 
+def draw_grasp_images(grasps, shape):
+    q = np.zeros(shape, np.float32)
+    a = np.zeros(shape, np.float32)
+    w = np.zeros(shape, np.float32)
+
+    for g in grasps:
+        if not (g[0:2].numpy() < 0.0).any():
+            grasp = Grasp((g[1],g[0]), g[2], g[3]/3.0, g[3]/2.0)
+            rr, cc = grasp.as_bb.polygon_coords(shape)
+            q[rr, cc] = 1.0
+            a[rr, cc] = g[2]
+            w[rr, cc] = g[3]
+
+    a_sin = np.sin(2*a)
+    a_cos = np.cos(2*a)
+    return q, a_sin, a_cos, w
 
 class TFRecordDataLoader(DataLoader):
     def __init__(self, config: dict, mode: str) -> None:
@@ -17,14 +33,14 @@ class TFRecordDataLoader(DataLoader):
         super().__init__(config, mode)
 
         # Get a list of files in case you are using multiple tfrecords
-        if self.mode == "train":
-            self.file_names = self.config["train_files"]
-            self.batch_size = self.config["train_batch_size"]
-        elif self.mode == "val":
-            self.file_names = self.config["eval_files"]
-            self.batch_size = self.config["eval_batch_size"]
+        if self.mode == 'train':
+            self.file_names = self.config['train_files']
+            self.batch_size = self.config['train_batch_size']
+        elif self.mode == 'val':
+            self.file_names = self.config['eval_files']
+            self.batch_size = self.config['eval_batch_size']
         else:
-            self.file_names = self.config["test_files"]
+            self.file_names = self.config['test_files']
 
     def input_fn(self) -> tf.data.Dataset:
         """
@@ -40,15 +56,15 @@ class TFRecordDataLoader(DataLoader):
         )
 
         # only shuffle training data
-        if self.mode == "train":
+        if self.mode == 'train':
             # shuffles and repeats a Dataset returning a new permutation for each epoch. with serialised compatibility
             dataset = dataset.apply(
-                tf.contrib.data.shuffle_and_repeat(
-                    buffer_size=10*self.batch_size
+                tf.data.experimental.shuffle_and_repeat(
+                    buffer_size=self.config['train_shuffle_buffer_size']
                 )
             )
         else:
-            dataset = dataset.repeat(self.config["num_epochs"])
+            dataset = dataset.repeat(self.config['num_epochs'])
         # create batches of data
         dataset = dataset.batch(batch_size=self.batch_size, drop_remainder=True)
         dataset = dataset.prefetch(buffer_size=10*self.batch_size)
@@ -66,68 +82,59 @@ class TFRecordDataLoader(DataLoader):
         # do parsing on the cpu
         with tf.device("/cpu:0"):
             # define input shapes
-            """features = {
-                'depth': tf.io.FixedLenFeature((640*480), tf.float32),
-                'segmentation': tf.io.FixedLenFeature((640*480), tf.int64),
-                'quality': tf.io.FixedLenFeature((640*480), tf.float32),
-                'angle_sin': tf.io.FixedLenFeature((640*480), tf.float32),
-                'angle_cos': tf.io.FixedLenFeature((640*480), tf.float32),
-                'gripper_width': tf.io.FixedLenFeature((640*480), tf.float32),
-                'width': tf.io.FixedLenFeature((), tf.int64),
-                'height': tf.io.FixedLenFeature((), tf.int64)
-            }
-            sequence_features = {
-                'grasps': tf.io.FixedLenSequenceFeature([4], tf.float32)
-            }
-            # parsed_features = tf.io.parse_single_example(example, features)
-            parsed_features, parsed_grasps_features = tf.io.parse_single_sequence_example(
-                    serialized=example, 
-                    context_features=features,
-                    sequence_features=sequence_features)"""
+
             features = {
                 'id': tf.io.FixedLenFeature([], tf.string),
                 'depth': tf.io.FixedLenFeature((640*480), tf.float32),
                 'segmentation': tf.io.FixedLenFeature((640*480), tf.int64),
-                'quality': tf.io.FixedLenFeature((640*480), tf.float32),
-                'angle_sin': tf.io.FixedLenFeature((640*480), tf.float32),
-                'angle_cos': tf.io.FixedLenFeature((640*480), tf.float32),
-                'gripper_width': tf.io.FixedLenFeature((640*480), tf.float32),
                 'width': tf.io.FixedLenFeature((), tf.int64),
                 'height': tf.io.FixedLenFeature((), tf.int64),
-                'grasps': tf.io.VarLenFeature(dtype=tf.float32),
+                'grasps': tf.io.VarLenFeature(dtype=tf.float32)
             }
+            if self.config['grasp_annotation_format'] == 'grasp_images':
+                features.update({
+                    'quality': tf.io.FixedLenFeature((640*480), tf.float32),
+                    'angle_sin': tf.io.FixedLenFeature((640*480), tf.float32),
+                    'angle_cos': tf.io.FixedLenFeature((640*480), tf.float32),
+                    'gripper_width': tf.io.FixedLenFeature((640*480), tf.float32)
+                })
             parsed_features = tf.io.parse_single_example(example, features)
             #grasps = tf.reshape(tf.sparse_tensor_to_dense(parsed_features['grasps']), (None,4))
-            
+
             grasps = parsed_features['grasps']
+
             # grasps = tf.ragged.from_sparse(parsed_features['grasps'])
             w, h = parsed_features['width'], parsed_features['height']
             dim = (h,w,1)
 
+
             depth = tf.reshape(parsed_features['depth'], dim)
             seg = tf.reshape(parsed_features['segmentation'], dim)
-            quality =  tf.reshape(parsed_features['quality'], dim)
-            angle_sin =  tf.reshape(parsed_features['angle_sin'], dim)
-            angle_cos =  tf.reshape(parsed_features['angle_cos'], dim)
-            gripper_width =  tf.reshape(parsed_features['gripper_width'] / 150.0, dim)
 
-            return {'input':depth}, {'seg': seg, 'quality': quality, 'angle_sin': angle_sin, 'angle_cos': angle_cos, 'gripper_width': gripper_width, "grasps": grasps , 'id': parsed_features['id']}
+            if self.config['grasp_annotation_format'] == 'grasp_images':
+                quality =  tf.reshape(parsed_features['quality'], dim)
+                angle_sin =  tf.reshape(parsed_features['angle_sin'], dim)
+                angle_cos =  tf.reshape(parsed_features['angle_cos'], dim)
+                gripper_width =  tf.reshape(parsed_features['gripper_width'], dim)
+            elif self.config['grasp_annotation_format'] == 'grasp_configurations':
+                grasps_list = tf.reshape(tf.sparse_tensor_to_dense (grasps, -1), (-1, 4))
+                quality, angle_sin, angle_cos, gripper_width = tf.py_function(
+                    draw_grasp_images, [grasps_list, dim], [tf.float32, tf.float32, tf.float32, tf.float32])
 
-            """features = {
-                "image": tf.FixedLenFeature(shape=[28, 28, 1], dtype=tf.float32),
-                "label": tf.FixedLenFeature(shape=[1], dtype=tf.int64),
+            feature_dict = {
+                'input': depth
             }
-            example = tf.parse_single_example(example, features=features)
+            target_dict = {
+                'seg': seg,
+                'quality': quality,
+                'angle_sin': angle_sin,
+                'angle_cos': angle_cos,
+                'gripper_width': gripper_width,
+                'grasps': grasps ,
+                'id': parsed_features['id']
+            }
+            return feature_dict, target_dict
 
-            # only augment training data
-            if self.mode == "train":
-                input_data = self._augment(example["image"])
-            else:
-                input_data = example["image"]
-
-            return {"input": input_data}, example["label"]
-            """
-    
     #@staticmethod
     #def _augment(example: tf.Tensor) -> tf.Tensor:
     #    """

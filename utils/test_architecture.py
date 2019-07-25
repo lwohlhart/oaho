@@ -1,24 +1,26 @@
+import os
 import tensorflow as tf
 import numpy as np
 import tensorflow.keras.layers as kl
-import grasp as grasp_util
 import cv2
 
 from data_loader.oaho_loader import TFRecordDataLoader
 
 config = {
   'train_files': ['data/oaho_synth_test.tfrecord', 'data/oaho_synth_test_01.tfrecord', 'data/oaho_synth_val_01.tfrecord'],
-  'train_batch_size': 4
+  'train_batch_size': 4,
+  'train_shuffle_buffer_size': 10,
+  'grasp_annotation_format': 'grasp_images' #'grasp_configurations'
 }
+
+config['train_files'] = [f for f in config['train_files'] if os.path.exists(os.path.abspath(f))]
+
 train_data = TFRecordDataLoader(config, mode='train')
 
 train_dataset = train_data.input_fn()
 train_iter = train_dataset.make_one_shot_iterator()
 train_input, train_target = train_iter.get_next()
 
-
-
-#grasp_util.Grasp([0.1,2], 1).as_bb
 
 np.random.seed(42)
 #tf.enable_eager_execution()
@@ -126,7 +128,7 @@ def update_op_fn(groundtruth_grasps_batched, detection_grasps_batched):
     
 	
 
-update_op = tf.py_func(update_op_fn, [groundtruth_grasps, detection_grasps], [])
+update_op = tf.py_function(update_op_fn, [groundtruth_grasps, detection_grasps], [])
 
 
 def gaussian_kernel(size: int, mean: float, std: float):
@@ -153,8 +155,29 @@ print(sess.run(update_op))
 
 blurred_image_result = sess.run(blurred_image)
 
-cv2.imwrite('blurred_image_temp.png', np.uint8(255*blurred_image_result[0]))
+#cv2.imwrite('blurred_image_temp.png', np.uint8(255*blurred_image_result[0]))
 
+
+import matplotlib.pyplot as plt
+
+def plot_batch():
+  train_target_batch = sess.run(train_target)
+  plt.figure()
+
+  n_samples = len(train_target_batch['seg'])
+  for i in range(n_samples):
+      plt.subplot(n_samples, 2, i*2+1)
+      plt.imshow(train_target_batch['seg'][i,:,:,0]*0.5 + train_target_batch['angle_sin'][i,:,:,0], cmap='gray')
+      plt.xticks([]); plt.yticks([])
+      #plt.subplot(n_samples, 3, i*3+2)
+      #plt.imshow(train_target_batch['seg'][i,:,:,0]*0.5 + train_target_batch['angle_sin_generated'][i,:,:,0], cmap='gray')
+      #plt.xticks([]); plt.yticks([])
+      plt.subplot(n_samples, 2, i*2+2)
+      plt.imshow(train_target_batch['seg'][i,:,:,0]*0.25*255)
+      plt.xticks([]); plt.yticks([])
+  plt.show()
+
+plot_batch()
 
 
 #print(parsed_features)

@@ -68,7 +68,7 @@ class OAHOModel(BaseModel):
 
         sin_loss = tf.losses.mean_squared_error(labels=labels['angle_sin'], predictions=sin_output, weights=grasp_loss_mask)
         cos_loss = tf.losses.mean_squared_error(labels=labels['angle_cos'], predictions=cos_output, weights=grasp_loss_mask)
-        width_loss = tf.losses.mean_squared_error(labels=labels['gripper_width'], predictions=width_output, weights=grasp_loss_mask)
+        width_loss = tf.losses.mean_squared_error(labels=(labels['gripper_width'] / 150.0), predictions=width_output, weights=grasp_loss_mask)
 
         angle = 0.5 * tf.atan2(sin_output, cos_output)
 

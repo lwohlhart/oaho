@@ -67,10 +67,10 @@ def encode_image_array_as_png_str(image):
 
 
 def draw_bounding_box_on_image_array(image,
-                                     ymin,
-                                     xmin,
-                                     ymax,
-                                     xmax,
+                                     center_x,
+                                     center_y,
+                                     angle,
+                                     width,
                                      color='red',
                                      thickness=4,
                                      display_str_list=(),
@@ -95,17 +95,17 @@ def draw_bounding_box_on_image_array(image,
       coordinates as absolute.
   """
   image_pil = Image.fromarray(np.uint8(image)).convert('RGB')
-  draw_bounding_box_on_image(image_pil, ymin, xmin, ymax, xmax, color,
+  draw_bounding_box_on_image(image_pil, center_x, center_y, angle, width, color,
                              thickness, display_str_list,
                              use_normalized_coordinates)
   np.copyto(image, np.array(image_pil))
 
 
 def draw_bounding_box_on_image(image,
-                               ymin,
-                               xmin,
-                               ymax,
-                               xmax,
+                               center_x,
+                               center_y,
+                               angle,
+                               width,
                                color='red',
                                thickness=4,
                                display_str_list=(),
@@ -122,11 +122,11 @@ def draw_bounding_box_on_image(image,
 
   Args:
     image: a PIL.Image object.
-    ymin: ymin of bounding box.
-    xmin: xmin of bounding box.
-    ymax: ymax of bounding box.
-    xmax: xmax of bounding box.
-    color: color to draw bounding box. Default is red.
+    center_x: center_x of grasp recangle.
+    center_y: center_y of grasp recangle.
+    angle: angle of grasp recangle.
+    width: width of grasp recangle.
+    color: color to draw grasp rectangle. Default is red.
     thickness: line thickness. Default value is 4.
     display_str_list: list of strings to display in box
                       (each to be shown on its own line).
@@ -134,22 +134,19 @@ def draw_bounding_box_on_image(image,
       ymin, xmin, ymax, xmax as relative to the image.  Otherwise treat
       coordinates as absolute.
   """
-  if ymin < 0 or xmin < 0:
+  if center_x < 0 or center_y < 0:
       return # invalid grasp definition (usually from sparse to dense annotation conversion)
 
   draw = ImageDraw.Draw(image)
   im_width, im_height = image.size
-  center = (ymin, xmin)
-  angle = ymax
-  w = 60 #xmax
-  l = w / 2.0
-  bb = Grasp(center, angle, l, w).as_bb
+  center = (center_y, center_x)
+  bb = Grasp(center, angle, width, width/2.0).as_bb
 #   if use_normalized_coordinates:
 #     (left, right, top, bottom) = (xmin * im_width, xmax * im_width,
 #                                   ymin * im_height, ymax * im_height)
 #   else:
 #     (left, right, top, bottom) = (xmin, xmax, ymin, ymax)
-  points = tuple(tuple(t) for t in bb.points)
+  points = tuple((t[1], t[0]) for t in bb.points)
   points = points + (points[0])
 
   draw.line(points, width=thickness, fill=color)
@@ -644,7 +641,7 @@ def visualize_boxes_and_labels_on_image_array(
       alpha=0.4
     )
   for box, color in box_to_color_map.items():
-    ymin, xmin, ymax, xmax = box
+    center_x, center_y, angle, width = box
     # if instance_masks is not None:
     #   draw_mask_on_image_array(
     #       image,
@@ -660,10 +657,10 @@ def visualize_boxes_and_labels_on_image_array(
     #   )
     draw_bounding_box_on_image_array(
         image,
-        ymin,
-        xmin,
-        ymax,
-        xmax,
+        center_x,
+        center_y,
+        angle,
+        width,
         color=color,
         thickness=line_thickness,
         # display_str_list=box_to_display_str_map[box],

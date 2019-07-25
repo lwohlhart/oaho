@@ -1,10 +1,7 @@
 import tensorflow as tf
 import numpy as np
 import tensorflow.keras.layers as kl
-import grasp as grasp_util
 import cv2
-
-#grasp_util.Grasp([0.1,2], 1).as_bb
 
 np.random.seed(42)
 #tf.enable_eager_execution()

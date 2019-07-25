@@ -97,15 +97,15 @@ class BoundingBoxes(object):
 
     def draw(self, shape, position=True, angle=True, width=True):
         if position:
-            pos_out = np.zeros(shape)
+            pos_out = np.zeros(shape, np.float32)
         else:
             pos_out = None
         if angle:
-            ang_out = np.zeros(shape)
+            ang_out = np.zeros(shape, np.float32)
         else:
             ang_out = None
         if width:
-            width_out = np.zeros(shape)
+            width_out = np.zeros(shape, np.float32)
         else:
             width_out = None
 
@@ -245,16 +245,16 @@ class Grasp:
         yo = np.sin(self.angle)
 
         y1 = self.center[0] + self.length/2.0 * yo
-        x1 = self.center[1] - self.length/2.0 * xo
+        x1 = self.center[1] + self.length/2.0 * xo
         y2 = self.center[0] - self.length/2.0 * yo
-        x2 = self.center[1] + self.length/2.0 * xo
+        x2 = self.center[1] - self.length/2.0 * xo
 
         return BoundingBox(np.array(
             [
-             [y1 - self.width/2.0 * xo, x1 - self.width/2.0 * yo],
-             [y2 - self.width/2.0 * xo, x2 - self.width/2.0 * yo],
-             [y2 + self.width/2.0 * xo, x2 + self.width/2.0 * yo],
-             [y1 + self.width/2.0 * xo, x1 + self.width/2.0 * yo],
+             [y1 - self.width/2.0 * xo, x1 + self.width/2.0 * yo],
+             [y1 + self.width/2.0 * xo, x1 - self.width/2.0 * yo],
+             [y2 + self.width/2.0 * xo, x2 - self.width/2.0 * yo],
+             [y2 - self.width/2.0 * xo, x2 + self.width/2.0 * yo],
              ]
         ).astype(np.int))
 
