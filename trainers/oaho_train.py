@@ -48,7 +48,8 @@ class OAHOTrainer(BaseTrain):
         run_config = run_config.replace(model_dir=self.config["job_dir"])
 
         warm_start = None
-        if 'warm_start_dir' in self.config and os.path.exists(self.config['warm_start_dir']):
+        if 'warm_start_dir' in self.config and self.config['warm_start_dir'] \
+            and os.path.exists(self.config['warm_start_dir']):
             warm_start = self.config['warm_start_dir']
             
         # intialise the estimator with your model
@@ -86,7 +87,7 @@ class OAHOTrainer(BaseTrain):
         # this should match the input shape of your model
         # TODO: update this to your input used in prediction/serving
         x1 = tf.feature_column.numeric_column(
-            "input", shape=[1, 480, 640, 1]
+            "input", shape=[480, 640, 1]
         )
         # create a list in case you have more than one input
         feature_columns = [x1]
@@ -104,4 +105,4 @@ class OAHOTrainer(BaseTrain):
         :param pred_fn: input_fn associated with prediction dataset
         :return: a list containing a prediction for each batch in the dataset
         """
-        pass
+        return list(estimator.predict(input_fn=pred_fn))
