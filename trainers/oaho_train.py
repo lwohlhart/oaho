@@ -4,7 +4,7 @@ from models.oaho_model import OAHOModel
 from data_loader.oaho_loader import TFRecordDataLoader
 from typing import Callable
 import os
-
+FLAGS = tf.app.flags.FLAGS
 
 class OAHOTrainer(BaseTrain):
     def __init__(
@@ -33,11 +33,11 @@ class OAHOTrainer(BaseTrain):
         config.gpu_options.allow_growth = True
 
         # get number of steps required for one pass of data
-        steps_per_epoch = len(self.train) / self.config["train_batch_size"]
+        steps_per_epoch = len(self.train) / FLAGS.train_batch_size
         
         print('@@ steps_per_epoch: {}'.format(steps_per_epoch))
         # print('@@ len(self.train): {}'.format(len(self.train)))
-        # print('@@ self.config["train_batch_size"]: {}'.format(self.config["train_batch_size"]))
+        # print('@@ FLAGS.train_batch_size: {}'.format(FLAGS.train_batch_size))
         # save_checkpoints_steps is number of batches before eval
         run_config = tf.estimator.RunConfig(
             session_config=config,
@@ -45,12 +45,12 @@ class OAHOTrainer(BaseTrain):
             log_step_count_steps=steps_per_epoch,  # number of steps in epoch
         )
         # set output directory
-        run_config = run_config.replace(model_dir=self.config["job_dir"])
+        run_config = run_config.replace(model_dir=FLAGS.job_dir)
 
         warm_start = None
-        if 'warm_start_dir' in self.config and self.config['warm_start_dir'] \
-            and os.path.exists(self.config['warm_start_dir']):
-            warm_start = self.config['warm_start_dir']
+        if 'warm_start_dir' in self.config and FLAGS.warm_start_dir \
+            and os.path.exists(FLAGS.warm_start_dir):
+            warm_start = FLAGS.warm_start_dir
             
         # intialise the estimator with your model
         estimator = tf.estimator.Estimator(model_fn=self.model.model, config=run_config, warm_start_from=warm_start)
@@ -58,10 +58,10 @@ class OAHOTrainer(BaseTrain):
         # create train and eval specs for estimator, it will automatically convert the tf.Dataset into an input_fn
         train_spec = tf.estimator.TrainSpec(
             lambda: self.train.input_fn(),
-            max_steps=self.config["num_epochs"] * steps_per_epoch,
+            max_steps=FLAGS.num_epochs * steps_per_epoch,
         )
 
-        eval_steps = len(self.val) // self.config["eval_batch_size"]
+        eval_steps = len(self.val) // FLAGS.eval_batch_size
         print('@@ eval_steps: {}'.format(eval_steps))
         eval_spec = tf.estimator.EvalSpec(lambda: self.val.input_fn(), 
                                         steps = eval_steps,
@@ -71,7 +71,7 @@ class OAHOTrainer(BaseTrain):
         tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
 
         # after training export the final model for use in tensorflow serving
-        self._export_model(estimator, self.config["export_path"])
+        self._export_model(estimator, FLAGS.export_path)
 
         # get results after training and exporting model
         self._predict(estimator, self.pred.input_fn)

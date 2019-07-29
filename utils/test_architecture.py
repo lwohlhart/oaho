@@ -5,15 +5,17 @@ import tensorflow.keras.layers as kl
 import cv2
 
 from data_loader.oaho_loader import TFRecordDataLoader
+FLAGS = tf.app.flags.FLAGS
 
 config = {
-  'train_files': ['data/oaho_synth_test.tfrecord', 'data/oaho_synth_test_01.tfrecord', 'data/oaho_synth_val_01.tfrecord'],
-  'train_batch_size': 4,
-  'train_shuffle_buffer_size': 10,
-  'grasp_annotation_format': 'grasp_images' #'grasp_configurations'
+  'train_files': ['data/check/oaho_synth_test.tfrecord', 'data/check/oaho_synth_test_01.tfrecord', 'data/check/oaho_synth_val_01.tfrecord']
 }
 
-config['train_files'] = [f for f in config['train_files'] if os.path.exists(os.path.abspath(f))]
+FLAGS.train_files = [f for f in config['train_files'] if os.path.exists(os.path.abspath(f))]
+FLAGS.train_batch_size = 4
+FLAGS.train_shuffle_buffer_size = 10
+FLAGS.grasp_annotation_format = 'grasp_configurations'
+# FLAGS.grasp_annotation_format = 'grasp_images'
 
 train_data = TFRecordDataLoader(config, mode='train')
 
@@ -78,7 +80,7 @@ ds = ds.batch(10,drop_remainder=True)
 it = ds.make_one_shot_iterator()
 input_iter, target_iter = it.get_next()
 
-g_dense = tf.reshape(tf.sparse_tensor_to_dense (target_iter['grasps'],-1), (10,-1,4)) 
+g_dense = tf.reshape(tf.sparse_tensor_to_dense (target_iter['grasps'],-1), (10,-1,4))
 
 pos_output = target_iter['quality']
 angle = target_iter['angle']
@@ -123,10 +125,10 @@ def update_op_fn(groundtruth_grasps_batched, detection_grasps_batched):
                          'rank 2.')
     if detection_grasps.shape[1] != 4:
         raise ValueError('All entries in detection_grasps should have '
-                         'shape[1] == 4.') 
+                         'shape[1] == 4.')
 
-    
-	
+
+
 
 update_op = tf.py_function(update_op_fn, [groundtruth_grasps, detection_grasps], [])
 
@@ -148,7 +150,7 @@ blurred_image = tf.nn.conv2d(blurred_image, gauss_kernel, strides=[1, 1, 1, 1], 
 
 sess = tf.Session()
 x, y = sess.run(it.get_next())
-  
+
 #print(sess.run(detection_grasps))
 print(sess.run(update_op))
 

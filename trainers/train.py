@@ -3,7 +3,7 @@ import tensorflow as tf
 from models.model import RawModel
 from data_loader.data_loader import TFRecordDataLoader
 from typing import Callable
-
+FLAGS = tf.app.flags.FLAGS
 
 class RawTrainer(BaseTrain):
     def __init__(
@@ -32,7 +32,7 @@ class RawTrainer(BaseTrain):
         config.gpu_options.allow_growth = True
 
         # get number of steps required for one pass of data
-        steps_pre_epoch = len(self.train) / self.config["train_batch_size"]
+        steps_pre_epoch = len(self.train) / FLAGS.train_batch_size
         # save_checkpoints_steps is number of batches before eval
         run_config = tf.estimator.RunConfig(
             session_config=config,
@@ -41,7 +41,7 @@ class RawTrainer(BaseTrain):
             log_step_count_steps=steps_pre_epoch,  # number of steps in epoch
         )
         # set output directory
-        run_config = run_config.replace(model_dir=self.config["job_dir"])
+        run_config = run_config.replace(model_dir=FLAGS.job_dir)
 
         # intialise the estimator with your model
         estimator = tf.estimator.Estimator(model_fn=self.model.model, config=run_config)
@@ -49,7 +49,7 @@ class RawTrainer(BaseTrain):
         # create train and eval specs for estimator, it will automatically convert the tf.Dataset into an input_fn
         train_spec = tf.estimator.TrainSpec(
             lambda: self.train.input_fn(),
-            max_steps=self.config["num_epochs"] * steps_pre_epoch,
+            max_steps=FLAGS.num_epochs * steps_pre_epoch,
         )
 
         eval_spec = tf.estimator.EvalSpec(lambda: self.val.input_fn())
@@ -58,7 +58,7 @@ class RawTrainer(BaseTrain):
         tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
 
         # after training export the final model for use in tensorflow serving
-        self._export_model(estimator, self.config["export_path"])
+        self._export_model(estimator, FLAGS.export_path)
 
         # get results after training and exporting model
         self._predict(estimator, self.pred.input_fn)
@@ -74,7 +74,7 @@ class RawTrainer(BaseTrain):
         # this should match the input shape of your model
         # TODO: update this to your input used in prediction/serving
         x1 = tf.feature_column.numeric_column(
-            "input", shape=[self.config["batch_size"], 28, 28, 1]
+            "input", shape=[FLAGS.batch_size, 28, 28, 1]
         )
         # create a list in case you have more than one input
         feature_columns = [x1]

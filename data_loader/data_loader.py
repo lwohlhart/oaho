@@ -3,6 +3,7 @@ import tensorflow as tf
 import multiprocessing
 from typing import Tuple, Dict
 import random
+FLAGS = tf.app.flags.FLAGS
 
 
 class TFRecordDataLoader(DataLoader):
@@ -16,13 +17,13 @@ class TFRecordDataLoader(DataLoader):
 
         # Get a list of files in case you are using multiple tfrecords
         if self.mode == "train":
-            self.file_names = self.config["train_files"]
-            self.batch_size = self.config["train_batch_size"]
+            self.file_names = FLAGS.train_files
+            self.batch_size = FLAGS.train_batch_size
         elif self.mode == "val":
-            self.file_names = self.config["eval_files"]
-            self.batch_size = self.config["eval_batch_size"]
+            self.file_names = FLAGS.eval_files
+            self.batch_size = FLAGS.eval_batch_size
         else:
-            self.file_names = self.config["test_files"]
+            self.file_names = FLAGS.test_files
 
     def input_fn(self) -> tf.data.Dataset:
         """
@@ -42,11 +43,11 @@ class TFRecordDataLoader(DataLoader):
             # shuffles and repeats a Dataset returning a new permutation for each epoch. with serialised compatibility
             dataset = dataset.apply(
                 tf.contrib.data.shuffle_and_repeat(
-                    buffer_size=len(self) // self.config["train_batch_size"]
+                    buffer_size=len(self) // FLAGS.train_batch_size
                 )
             )
         else:
-            dataset = dataset.repeat(self.config["num_epochs"])
+            dataset = dataset.repeat(FLAGS.num_epochs)
         # create batches of data
         dataset = dataset.batch(batch_size=self.batch_size)
         return dataset

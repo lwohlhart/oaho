@@ -2,13 +2,16 @@ import tensorflow as tf
 import numpy as np
 import tensorflow.keras.layers as kl
 import cv2
+import matplotlib.pyplot as plt
 
 np.random.seed(42)
 #tf.enable_eager_execution()
 
-def get_example(depth, width, height, grasps):
+def get_example(depth, width, height, grasps, segmentation):
+  segmentation_raw = cv2.imencode('.png', segmentation)[1].tostring()
   return tf.train.Example(features=tf.train.Features(feature={
     'depth': tf.train.Feature(float_list=tf.train.FloatList(value=np.reshape(depth, -1))),
+    'segmentation/raw': tf.train.Feature(bytes_list=tf.train.BytesList(value=[segmentation_raw])),
     'width': tf.train.Feature(int64_list=tf.train.Int64List(value=[width])),
     'grasps': tf.train.Feature(float_list=tf.train.FloatList(value=grasps)),
     'height': tf.train.Feature(int64_list=tf.train.Int64List(value=[height]))
@@ -16,6 +19,10 @@ def get_example(depth, width, height, grasps):
 
 w,h = 640,480
 d1 = np.random.normal(size=(h,w))
+seg1 = np.uint8(np.random.random((h,w))*4)
+seg1[60:80, 100:130] = 2
+seg1[20:40, 300:350] = 0
+
 y = 50
 x = 30
 d1[y,x] = 10
@@ -24,8 +31,8 @@ g1 = np.array([34.1,35.1,0.5,40, 55.1,56.1, 0.2, 80])
 
 g2 = np.array([34.1,35.1,0.5,40])
 
-ex1_serialized = get_example(d1,w,h,g1).SerializeToString()
-ex2_serialized = get_example(d1,w,h,g2).SerializeToString()
+ex1_serialized = get_example(d1,w,h,g1,seg1).SerializeToString()
+ex2_serialized = get_example(d1,w,h,g2,seg1).SerializeToString()
 
 
 def fake_generator():
@@ -36,6 +43,7 @@ def parse_example(example):
 
   features = {
     'depth': tf.io.FixedLenFeature((640*480), tf.float32),
+    'segmentation/raw': tf.io.FixedLenFeature([], tf.string),
     'width': tf.io.FixedLenFeature((), tf.int64),
     'height': tf.io.FixedLenFeature((), tf.int64),
     'grasps': tf.io.VarLenFeature(dtype=tf.float32)
@@ -45,10 +53,11 @@ def parse_example(example):
   w, h = parsed_features['width'], parsed_features['height']
   dim = (h,w,1)
 
+  segmentation = tf.image.decode_png(parsed_features['segmentation/raw'])
   depth = tf.reshape(parsed_features['depth'], dim)
   grasps = parsed_features['grasps']
 
-  return {'input': depth}, {'quality': depth, 'grasps': grasps, 'angle': depth, 'width': depth}
+  return {'input': depth}, {'quality': depth, 'grasps': grasps, 'angle': depth, 'width': depth, 'segmentation': segmentation }
 
 
 ds = tf.data.Dataset.from_generator(fake_generator, tf.string)
@@ -136,8 +145,10 @@ print(sess.run(update_op))
 
 blurred_image_result = sess.run(blurred_image)
 
-cv2.imwrite('blurred_image_temp.png', np.uint8(255*blurred_image_result[0]))
+#cv2.imwrite('blurred_image_temp.png', np.uint8(255*blurred_image_result[0]))
 
+plt.imshow(y['segmentation'])
+plt.show()
 
 
 #print(parsed_features)

@@ -5,6 +5,7 @@ import multiprocessing
 from typing import Tuple, Dict
 import random
 import numpy as np
+FLAGS = tf.app.flags.FLAGS
 
 def draw_grasp_images(grasps, shape):
     q = np.zeros(shape, np.float32)
@@ -34,13 +35,13 @@ class TFRecordDataLoader(DataLoader):
 
         # Get a list of files in case you are using multiple tfrecords
         if self.mode == 'train':
-            self.file_names = self.config['train_files']
-            self.batch_size = self.config['train_batch_size']
+            self.file_names = FLAGS.train_files
+            self.batch_size = FLAGS.train_batch_size
         elif self.mode == 'val':
-            self.file_names = self.config['eval_files']
-            self.batch_size = self.config['eval_batch_size']
+            self.file_names = FLAGS.eval_files
+            self.batch_size = FLAGS.eval_batch_size
         else:
-            self.file_names = self.config['test_files']
+            self.file_names = FLAGS.test_files
 
     def input_fn(self) -> tf.data.Dataset:
         """
@@ -60,11 +61,11 @@ class TFRecordDataLoader(DataLoader):
             # shuffles and repeats a Dataset returning a new permutation for each epoch. with serialised compatibility
             dataset = dataset.apply(
                 tf.data.experimental.shuffle_and_repeat(
-                    buffer_size=self.config['train_shuffle_buffer_size']
+                    buffer_size=FLAGS.train_shuffle_buffer_size
                 )
             )
         else:
-            dataset = dataset.repeat(self.config['num_epochs'])
+            dataset = dataset.repeat(FLAGS.num_epochs)
         # create batches of data
         dataset = dataset.batch(batch_size=self.batch_size, drop_remainder=True)
         dataset = dataset.prefetch(buffer_size=10*self.batch_size)
@@ -86,12 +87,12 @@ class TFRecordDataLoader(DataLoader):
             features = {
                 'id': tf.io.FixedLenFeature([], tf.string),
                 'depth': tf.io.FixedLenFeature((640*480), tf.float32),
-                'segmentation': tf.io.FixedLenFeature((640*480), tf.int64),
+                'segmentation/raw': tf.io.FixedLenFeature([], tf.string),
                 'width': tf.io.FixedLenFeature((), tf.int64),
                 'height': tf.io.FixedLenFeature((), tf.int64),
                 'grasps': tf.io.VarLenFeature(dtype=tf.float32)
             }
-            if self.config['grasp_annotation_format'] == 'grasp_images':
+            if FLAGS.grasp_annotation_format == 'grasp_images':
                 features.update({
                     'quality': tf.io.FixedLenFeature((640*480), tf.float32),
                     'angle_sin': tf.io.FixedLenFeature((640*480), tf.float32),
@@ -109,14 +110,14 @@ class TFRecordDataLoader(DataLoader):
 
 
             depth = tf.reshape(parsed_features['depth'], dim)
-            seg = tf.reshape(parsed_features['segmentation'], dim)
+            seg = tf.image.decode_image(parsed_features['segmentation/raw'], dtype=tf.int32)
 
-            if self.config['grasp_annotation_format'] == 'grasp_images':
+            if FLAGS.grasp_annotation_format == 'grasp_images':
                 quality =  tf.reshape(parsed_features['quality'], dim)
                 angle_sin =  tf.reshape(parsed_features['angle_sin'], dim)
                 angle_cos =  tf.reshape(parsed_features['angle_cos'], dim)
                 gripper_width =  tf.reshape(parsed_features['gripper_width'], dim)
-            elif self.config['grasp_annotation_format'] == 'grasp_configurations':
+            elif FLAGS.grasp_annotation_format == 'grasp_configurations':
                 grasps_list = tf.reshape(tf.sparse_tensor_to_dense (grasps, -1), (-1, 4))
                 quality, angle_sin, angle_cos, gripper_width = tf.py_function(
                     draw_grasp_images, [grasps_list, dim], [tf.float32, tf.float32, tf.float32, tf.float32])

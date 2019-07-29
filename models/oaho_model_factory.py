@@ -5,6 +5,7 @@ import tensorflow as tf
 from models.oaho_model_deeplab import OAHOModelDeeplab
 from models.oaho_model import OAHOModel
 from models.oaho_model_fcn import OAHOModelFCN
+FLAGS = tf.app.flags.FLAGS
 
 
 def oaho_model_from_config(config: Dict) -> OAHOModel:
@@ -12,12 +13,12 @@ def oaho_model_from_config(config: Dict) -> OAHOModel:
     model_cfg = {
         'architecture': 'blabla'
     }    
-    if config['model_def']:
-        if os.path.exists(config['model_def']):
-            with open(config['model_def'], 'r') as f:
+    if FLAGS.model_def:
+        if os.path.exists(FLAGS.model_def):
+            with open(FLAGS.model_def, 'r') as f:
                 model_cfg.update(yaml.full_load(f))
         else:
-            tf.logging.warn('Model def file {} doesn\'t exist'.format(config['model_def']))
+            tf.logging.warn('Model def file {} doesn\'t exist'.format(FLAGS.model_def))
     
     config['model'] = model_cfg
     

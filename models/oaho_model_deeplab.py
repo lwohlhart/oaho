@@ -4,6 +4,13 @@ from tensorflow.keras import applications as ka
 from models.oaho_model import OAHOModel
 from typing import Dict, Tuple
 
+import sys
+sys.path.append('tensorflow_models/research')
+sys.path.append('tensorflow_models/research/slim')
+
+import deeplab.common as dlc
+import deeplab.model as dlm
+from deeplab.core import utils
 
 class OAHOModelDeeplab(OAHOModel):
     def __init__(self, config: dict) -> None:
@@ -11,6 +18,11 @@ class OAHOModelDeeplab(OAHOModel):
         :param config: global configuration
         """
         super().__init__(config)
+
+        tf.flags.FLAGS.model_variant = 'resnet_v1_50'
+        tf.flags.FLAGS.decoder_output_stride = [4]
+        self.model_options = dlc.ModelOptions(4, atrous_rates=[6,12,18], crop_size=[480,640])
+
 
     def _create_model(self, x: tf.Tensor, is_training: bool) -> tf.Tensor:
         """
@@ -22,41 +34,31 @@ class OAHOModelDeeplab(OAHOModel):
 
         tf.logging.info("Constructing OAHO Model Deeplab")
 
-        def decoder_block(input_tensor: tf.Tensor, feature_maps: int, kernel_size: Tuple[int, int],
-                          strides: Tuple[int, int], is_training: bool,
-                          skip_connection: tf.Tensor = None) -> tf.Tensor:
-            x = kl.Conv2DTranspose(feature_maps, kernel_size=kernel_size, strides=strides, padding='same')(input_tensor)
-            x = kl.BatchNormalization()(x)
-            x = kl.ReLU()(x)
-            if skip_connection is not None:
-                x = tf.keras.layers.concatenate([x, skip_connection])
-            return x
+        model_options = self.model_options
+        reuse = None
+        weight_decay=0.0001
+        fine_tune_batch_norm=is_training # False
 
-        no_filters = [10, 32, 128, 512]
-        filter_sizes= [(3, 3), (3, 3), (3, 3), (2, 2)]
 
         input_tensor = x
         x = tf.keras.layers.concatenate([x,x,x])
+        features_encoder, endpoints = dlm.extract_features(x, model_options)
+        features_decoder = dlm.refine_by_decoder(features_encoder,
+            endpoints,
+            crop_size=model_options.crop_size,
+            decoder_output_stride=model_options.decoder_output_stride,
+            model_variant=model_options.model_variant,
+            weight_decay=weight_decay,
+            reuse=reuse,
+            is_training=is_training,
+            fine_tune_batch_norm=fine_tune_batch_norm,
+            use_bounded_activation=model_options.use_bounded_activation
+            )
 
-        pretrained_weights = 'imagenet' if is_training else None
 
-        resnet = ka.ResNet50(weights=pretrained_weights, include_top=False, input_tensor=x, input_shape=(480,640,3))
+        x = utils.resize_bilinear(features_decoder, [480,640], features_decoder.dtype)
 
-        enc1 = resnet.get_layer('activation').output # resnet.layers[4].output
-        enc2 = resnet.get_layer('activation_9').output # resnet.layers[38].output
-        enc3 = resnet.get_layer('activation_21').output # resnet.layers[80].output
-        enc4 = resnet.get_layer('activation_39').output # resnet.layers[142].output
-        # enc5 = resnet.get_layer('activation_48').output # resnet.layers[174].output
 
-        dec = enc4
-
-        # dec = decoder_block(dec, no_filters[3], kernel_size=filter_sizes[3], strides=(2, 2), skip_connection=enc4, is_training=is_training)
-        dec = decoder_block(dec, no_filters[3], kernel_size=filter_sizes[3], strides=(2, 2), skip_connection=enc3, is_training=is_training)
-        dec = decoder_block(dec, no_filters[2], kernel_size=filter_sizes[2], strides=(2, 2), skip_connection=enc2, is_training=is_training)
-        dec = decoder_block(dec, no_filters[1], kernel_size=filter_sizes[1], strides=(2, 2), skip_connection=enc1, is_training=is_training)
-        dec = decoder_block(dec, no_filters[0], kernel_size=filter_sizes[0], strides=(2, 2), skip_connection=input_tensor, is_training=is_training)
-
-        x = dec
         # ===================================================================================================
         # Output layers
         seg_head = kl.Conv2D(32, kernel_size=2, padding='same', name='seg_head_1', activation='relu')(x)

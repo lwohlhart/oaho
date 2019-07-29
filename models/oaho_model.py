@@ -6,7 +6,7 @@ from typing import Dict, Tuple
 import sys
 from metrics.oaho_evaluation import OAHODetectionEvaluator
 from utils.oaho_visualization import OAHODetectionVisualizer
-
+FLAGS = tf.app.flags.FLAGS
 
 class OAHOModel(BaseModel):
     def __init__(self, config: dict) -> None:
@@ -150,7 +150,7 @@ class OAHOModel(BaseModel):
 
         # create learning rate variable for hyper param tuning
         lr = tf.Variable(
-            initial_value=self.config['learning_rate'], name='learning-rate'
+            initial_value=FLAGS.learning_rate, name='learning-rate'
         )
 
         # TODO: update optimiser

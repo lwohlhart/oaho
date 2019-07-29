@@ -93,17 +93,17 @@ fi
 # start training
 CUDA_VISIBLE_DEVICES="$GPU_ID"
 python3 -m initialisers.task \
-        --job-dir ${JOB_DIR} \
-        --train-batch-size ${BATCH} \
-        --eval-batch-size ${BATCH} \
-        --learning-rate ${LR} \
-        --num-epochs ${EPOCHS} \
-        --train-files ${TRAIN_FILES} \
-        --eval-files ${EVAL_FILES} \
-        --test-files ${TEST_FILES} \
-        --export-path "${OUTPUT_DIR}/exports" \
-	--warm-start-dir "${WARM_START_DIR}" \
-        --model-def "${MODEL_DEF}" \
+        --job_dir ${JOB_DIR} \
+        --train_batch_size ${BATCH} \
+        --eval_batch_size ${BATCH} \
+        --learning_rate ${LR} \
+        --num_epochs ${EPOCHS} \
+        --train_files ${TRAIN_FILES} \
+        --eval_files ${EVAL_FILES} \
+        --test_files ${TEST_FILES} \
+        --export_path "${OUTPUT_DIR}/exports" \
+        --warm_start_dir "${WARM_START_DIR}" \
+        --model_def "${MODEL_DEF}" \
 &>runlogs/$JOB_NAME.log & echo "$!" > runlogs/$JOB_NAME.pid
 
 echo "Job launched."

@@ -68,15 +68,15 @@ fi
 export CUDA_VISIBLE_DEVICES=""
 # start training
 python3 -m initialisers.task \
-        --job-dir ${JOB_DIR} \
-        --train-batch-size ${TRAIN_BATCH} \
-        --eval-batch-size ${EVAL_BATCH} \
-        --learning-rate ${LR} \
-        --num-epochs ${EPOCHS} \
-        --train-files ${TRAIN_FILES} \
-        --eval-files ${EVAL_FILES} \
-        --test-files ${TEST_FILES} \
-        --export-path "${OUTPUT_DIR}exports" \
+        --job_dir ${JOB_DIR} \
+        --train_batch_size ${TRAIN_BATCH} \
+        --eval_batch_size ${EVAL_BATCH} \
+        --learning_rate ${LR} \
+        --num_epochs ${EPOCHS} \
+        --train_files ${TRAIN_FILES} \
+        --eval_files ${EVAL_FILES} \
+        --test_files ${TEST_FILES} \
+        --export_path "${OUTPUT_DIR}exports" \
                &>runlogs/$2.log &
                echo "$!" > runlogs/$2.pid
 
