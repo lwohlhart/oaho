@@ -13,7 +13,7 @@ def draw_grasp_images(grasps, shape):
     w = np.zeros(shape, np.float32)
 
     for g in grasps:
-        if not (g[0:2].numpy() < 0.0).any():
+        if g[0] > 0.0 and g[1] > 0.0:
             grasp = Grasp((g[1],g[0]), g[2], g[3]/3.0, g[3]/2.0)
             rr, cc = grasp.as_bb.polygon_coords(shape)
             q[rr, cc] = 1.0
@@ -110,7 +110,7 @@ class TFRecordDataLoader(DataLoader):
 
 
             depth = tf.reshape(parsed_features['depth'], dim)
-            seg = tf.image.decode_image(parsed_features['segmentation/raw'], dtype=tf.int32)
+            seg = tf.cast(tf.image.decode_image(parsed_features['segmentation/raw']), dtype=tf.int32)
 
             if FLAGS.grasp_annotation_format == 'grasp_images':
                 quality =  tf.reshape(parsed_features['quality'], dim)
@@ -119,7 +119,7 @@ class TFRecordDataLoader(DataLoader):
                 gripper_width =  tf.reshape(parsed_features['gripper_width'], dim)
             elif FLAGS.grasp_annotation_format == 'grasp_configurations':
                 grasps_list = tf.reshape(tf.sparse_tensor_to_dense (grasps, -1), (-1, 4))
-                quality, angle_sin, angle_cos, gripper_width = tf.py_function(
+                quality, angle_sin, angle_cos, gripper_width = tf.py_func(
                     draw_grasp_images, [grasps_list, dim], [tf.float32, tf.float32, tf.float32, tf.float32])
 
             feature_dict = {
