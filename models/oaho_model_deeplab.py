@@ -19,9 +19,21 @@ class OAHOModelDeeplab(OAHOModel):
         """
         super().__init__(config)
 
-        tf.flags.FLAGS.model_variant = 'resnet_v1_50'
-        tf.flags.FLAGS.decoder_output_stride = [4]
-        self.model_options = dlc.ModelOptions(4, atrous_rates=[6,12,18], crop_size=[480,640])
+        # config['model_variant'] = 'mobilenet_v2'
+        # config['model_variant'] = 'xception_65'
+        config['model_variant'] = 'resnet_v1_50'
+
+        tf.flags.FLAGS.model_variant = config['model_variant']
+
+        if 'resnet' in config['model_variant'] or 'xception' in config['model_variant']:
+            tf.flags.FLAGS.decoder_output_stride = [4]
+            atrous_rates = [6, 12, 18]
+        elif 'mobilenet' in config['model_variant']:
+            tf.flags.FLAGS.decoder_output_stride = None
+            atrous_rates = None
+
+
+        self.model_options = dlc.ModelOptions(4, atrous_rates=atrous_rates, crop_size=[480,640])
 
 
     def _create_model(self, x: tf.Tensor, is_training: bool) -> tf.Tensor:
@@ -38,11 +50,16 @@ class OAHOModelDeeplab(OAHOModel):
         reuse = None
         weight_decay=0.0001
         fine_tune_batch_norm=is_training # False
-
+        nas_training_hyper_parameters = None
 
         input_tensor = x
         x = tf.keras.layers.concatenate([x,x,x])
-        features_encoder, endpoints = dlm.extract_features(x, model_options)
+        features_encoder, endpoints = dlm.extract_features(x, model_options,
+            weight_decay=weight_decay,
+            reuse=reuse,
+            is_training=is_training,
+            fine_tune_batch_norm=fine_tune_batch_norm,
+            nas_training_hyper_parameters=nas_training_hyper_parameters)
         features_decoder = dlm.refine_by_decoder(features_encoder,
             endpoints,
             crop_size=model_options.crop_size,
