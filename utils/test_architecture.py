@@ -4,6 +4,7 @@ import numpy as np
 import tensorflow.keras.layers as kl
 import cv2
 
+import utils.task_utils as task_utils
 from data_loader.oaho_loader import TFRecordDataLoader
 FLAGS = tf.app.flags.FLAGS
 
