@@ -10,7 +10,7 @@ sys.path.append('tensorflow_models/research/slim')
 
 import deeplab.common as dlc
 import deeplab.model as dlm
-from deeplab.core import utils
+from deeplab.core import utils as dlutils
 
 class OAHOModelDeeplab(OAHOModel):
     def __init__(self, config: dict) -> None:
@@ -47,7 +47,6 @@ class OAHOModelDeeplab(OAHOModel):
 
         tf.logging.info("Constructing OAHO Model Deeplab")
 
-        model_options = self.model_options
         reuse = None
         weight_decay=0.0001
         fine_tune_batch_norm=is_training # False
@@ -74,9 +73,9 @@ class OAHOModelDeeplab(OAHOModel):
         #     )
 
 
-        # x = utils.resize_bilinear(features_decoder, [480,640], features_decoder.dtype)
+        # x = dlutils.resize_bilinear(features_decoder, [480,640], features_decoder.dtype)
         outputs_to_scales_to_logits = dlm.multi_scale_logits(x, 
-            model_options, 
+            self.model_options, 
             None, 
             weight_decay=weight_decay,  
             is_training=is_training,  
@@ -85,12 +84,16 @@ class OAHOModelDeeplab(OAHOModel):
             )
 
         seg_output = outputs_to_scales_to_logits['semantic']['merged_logits']
-
         pos_output = outputs_to_scales_to_logits['pos']['merged_logits']
         cos_output = outputs_to_scales_to_logits['angle_sin']['merged_logits']
         sin_output = outputs_to_scales_to_logits['angle_cos']['merged_logits']
         width_output = outputs_to_scales_to_logits['width']['merged_logits']
         
+        seg_output = dlutils.resize_bilinear(seg_output, self.model_options.crop_size, seg_output.dtype)
+        pos_output = dlutils.resize_bilinear(pos_output, self.model_options.crop_size, pos_output.dtype)
+        cos_output = dlutils.resize_bilinear(cos_output, self.model_options.crop_size, cos_output.dtype)
+        sin_output = dlutils.resize_bilinear(sin_output, self.model_options.crop_size, sin_output.dtype)
+        width_output = dlutils.resize_bilinear(width_output, self.model_options.crop_size, width_output.dtype)
 
         # ===================================================================================================
         # Output layers
