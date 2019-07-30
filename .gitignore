@@ -106,7 +106,8 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-data/*.tfrecord
+data/
+!data/load_oaho_records_jr.sh
 out
 config/model.yaml
 mprofile_*.dat

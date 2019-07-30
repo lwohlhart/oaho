@@ -45,7 +45,7 @@ class OAHOModelDeeplab(OAHOModel):
         :return: completely constructed model
         """
 
-        tf.logging.info("Constructing OAHO Model Deeplab")
+        tf.logging.info('Constructing OAHO Model Deeplab, variant: {}'.format(self.model_options.model_variant))
 
         reuse = None
         weight_decay=0.0001
@@ -53,7 +53,7 @@ class OAHOModelDeeplab(OAHOModel):
         nas_training_hyper_parameters = None
 
         input_tensor = x
-        x = tf.keras.layers.concatenate([x,x,x])
+        # x = tf.keras.layers.concatenate([x,x,x])
         # features_encoder, endpoints = dlm.extract_features(x, model_options,
         #     weight_decay=weight_decay,
         #     reuse=reuse,
