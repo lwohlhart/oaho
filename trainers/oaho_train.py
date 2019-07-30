@@ -48,8 +48,7 @@ class OAHOTrainer(BaseTrain):
         run_config = run_config.replace(model_dir=FLAGS.job_dir)
 
         warm_start = None
-        if 'warm_start_dir' in self.config and FLAGS.warm_start_dir \
-            and os.path.exists(FLAGS.warm_start_dir):
+        if FLAGS.warm_start_dir and os.path.exists(FLAGS.warm_start_dir):
             warm_start = FLAGS.warm_start_dir
             
         # intialise the estimator with your model
