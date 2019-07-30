@@ -96,11 +96,11 @@ class OAHOModel(BaseModel):
 
         # hue values are either 0 (red) for negative or 2/3 (blue) for positive angles; saturation depends on angle amplitude
         angle_quality_masked = quality_mask * angle * 2 / np.pi
-        angle_quality_masked = tf.stack([(tf.sign(angle_quality_masked)+1.0)/3.0 , tf.abs(angle_quality_masked), tf.ones_like(angle_quality_masked)], axis=3)  
+        angle_quality_masked = tf.concat([(tf.sign(angle_quality_masked)+1.0)/3.0 , tf.abs(angle_quality_masked), tf.ones_like(angle_quality_masked)], axis=3)  
         angle_quality_masked = tf.image.hsv_to_rgb(angle_quality_masked)
         
         width_quality_masked = quality_mask * width_output
-        width_quality_masked = tf.stack([tf.zeros_like(width_quality_masked) , width_quality_masked, tf.ones_like(width_quality_masked)], axis=3)  
+        width_quality_masked = tf.concat([tf.zeros_like(width_quality_masked) , width_quality_masked, tf.ones_like(width_quality_masked)], axis=3)  
         width_quality_masked = tf.image.hsv_to_rgb(width_quality_masked)
 
         images = {
