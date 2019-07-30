@@ -3,14 +3,16 @@
 # where to write tfevents
 OUTPUT_DIR="out"
 # experiment settings
-TRAIN_BATCH=4 # 8
-EVAL_BATCH=4 # 8
-BATCH=4 # 8
+TRAIN_BATCH=2 # 8
+EVAL_BATCH=2 # 8
+BATCH=2 # 8
 
 LR=0.0001
 EPOCHS=1000
 # create a job name for the this run
-prefix="oaho"
+MODEL="model_resnet_deconv"
+
+prefix="oaho_$MODEL"
 now=$(date +"%Y%m%d_%H_%M_%S")
 JOB_NAME="$prefix"_"$now"
 # locations locally or on the cloud for your files
@@ -21,10 +23,10 @@ TEST_FILES="data/oaho_synth_test*.tfrecord"
 #WARM_START_DIR="out/oaho_20190704_16_28_43/"
 #WARM_START_DIR="out/oaho_20190704_17_30_03/"
 #WARM_START_DIR="out/oaho_20190711_11_50_08/"
-WARM_START_DIR="out/oaho_20190711_17_06_50/"
+#WARM_START_DIR="out/oaho_20190711_17_06_50/"
+WARM_START_DIR="out/oaho_20190723_18_21_09/"
 
-
-MODEL_DEF="config/model.yaml"
+MODEL_DEF="config/$MODEL.yaml"
 
 ##########################################################
 
