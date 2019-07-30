@@ -92,7 +92,7 @@ class OAHOModel(BaseModel):
         quality = tf.nn.conv2d(quality, gaussian_blur_kernel, [1,1,1,1], 'SAME')
         
 
-        quality_mask = tf.to_float(tf.greater(quality, tf.zeros_like(quality)))
+        quality_mask = tf.to_float(tf.greater(quality, 0.2*tf.reduce_max(quality)*tf.ones_like(quality)))
 
         # hue values are either 0 (red) for negative or 2/3 (blue) for positive angles; saturation depends on angle amplitude
         angle_quality_masked = quality_mask * angle * 2 / np.pi
