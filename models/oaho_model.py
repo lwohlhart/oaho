@@ -1,6 +1,7 @@
 import tensorflow as tf
 from tensorflow.keras import layers as kl
 from tensorflow.keras import applications as ka
+import numpy as np
 from base.model import BaseModel
 from typing import Dict, Tuple
 import sys
@@ -91,6 +92,17 @@ class OAHOModel(BaseModel):
         quality = tf.nn.conv2d(quality, gaussian_blur_kernel, [1,1,1,1], 'SAME')
         
 
+        quality_mask = tf.to_float(tf.greater(quality, tf.zeros_like(quality)))
+
+        # hue values are either 0 (red) for negative or 2/3 (blue) for positive angles; saturation depends on angle amplitude
+        angle_quality_masked = quality_mask * angle * 2 / np.pi
+        angle_quality_masked = tf.stack([(tf.sign(angle_quality_masked)+1.0)/3.0 , tf.abs(angle_quality_masked), tf.ones_like(angle_quality_masked)], axis=3)  
+        angle_quality_masked = tf.image.hsv_to_rgb(angle_quality_masked)
+        
+        width_quality_masked = quality_mask * width_output
+        width_quality_masked = tf.stack([tf.zeros_like(width_quality_masked) , width_quality_masked, tf.ones_like(width_quality_masked)], axis=3)  
+        width_quality_masked = tf.image.hsv_to_rgb(width_quality_masked)
+
         images = {
             'input': tf.summary.image('input', features['input']),
             'segmentation': tf.summary.image('segmentation', segmentation_image),
@@ -98,7 +110,9 @@ class OAHOModel(BaseModel):
             'angle_sin': tf.summary.image('angle_sin', sin_output),
             'angle_cos': tf.summary.image('angle_cos', cos_output),
             'width': tf.summary.image('width', width_output),
-            'angle': tf.summary.image('angle', angle)
+            'angle': tf.summary.image('angle', angle),
+            'angle_quality_masked': tf.summary.image('angle_quality_masked', angle_quality_masked),
+            'width_quality_masked': tf.summary.image('width_quality_masked', width_quality_masked)
         }
 
 	    # tf.summary.image('segmentation', tf.image.hsv_to_rgb(predictions['segmentation'] / 4.0))
