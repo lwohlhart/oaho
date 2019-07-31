@@ -33,18 +33,35 @@ class OAHOModel(BaseModel):
         seg_output, pos_output, cos_output, sin_output, width_output = self._create_model(features['input'], is_training)
         segmentation_classes = tf.argmax(input=seg_output, axis=3, output_type=tf.int32)
         # TODO: update model predictions
+
+        gaussian_blur_kernel = gaussian_kernel(5,0.0,1.0)
+        gaussian_blur_kernel = gaussian_blur_kernel[:,:,tf.newaxis, tf.newaxis]
+        quality = tf.sigmoid(pos_output)
+        quality = tf.nn.conv2d(quality, gaussian_blur_kernel, [1,1,1,1], 'SAME')
+
+        angle = 0.5 * tf.atan2(sin_output, cos_output)
+
         predictions = {
             'segmentation': tf.expand_dims(segmentation_classes,-1),
             'segmentation_probabilities': tf.nn.softmax(seg_output),
+            'quality': quality,
+            'angle': angle,
+            'width': width_output*150.0
         }
 #
         if mode == tf.estimator.ModeKeys.PREDICT:
             # TODO: update output during serving
             export_outputs = {
-                'segmentation': tf.estimator.export.ClassificationOutput(
-                    scores=predictions['segmentation_probabilities'],
-                    classes=tf.cast(predictions['segmentation'], tf.string)
-                )
+                'segmentation': tf.estimator.export.PredictOutput({
+                    'scores': predictions['segmentation_probabilities'],
+                    'classes':predictions['segmentation']
+                }),
+                tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY:
+                  tf.estimator.export.PredictOutput({
+                    'quality': predictions['quality'],
+                    'angle': predictions['angle'],
+                    'width': predictions['width'],
+                })
             }
             return tf.estimator.EstimatorSpec(
                 mode, predictions=predictions, export_outputs=export_outputs
@@ -71,7 +88,7 @@ class OAHOModel(BaseModel):
         cos_loss = tf.losses.mean_squared_error(labels=labels['angle_cos'], predictions=cos_output, weights=grasp_loss_mask)
         width_loss = tf.losses.mean_squared_error(labels=(labels['gripper_width'] / 150.0), predictions=width_output, weights=grasp_loss_mask)
 
-        angle = 0.5 * tf.atan2(sin_output, cos_output)
+
 
         loss = seg_loss + quality_loss + sin_loss + cos_loss + width_loss
 
@@ -86,21 +103,18 @@ class OAHOModel(BaseModel):
         tf.summary.scalar('width_loss', width_loss)
         tf.summary.scalar('loss', loss)
 
-        gaussian_blur_kernel = gaussian_kernel(5,0.0,1.0)
-        gaussian_blur_kernel = gaussian_blur_kernel[:,:,tf.newaxis, tf.newaxis]
-        quality = tf.sigmoid(pos_output)
-        quality = tf.nn.conv2d(quality, gaussian_blur_kernel, [1,1,1,1], 'SAME')
-        
+
+
 
         quality_mask = tf.to_float(tf.greater(quality, 0.2*tf.reduce_max(quality)*tf.ones_like(quality)))
 
         # hue values are either 0 (red) for negative or 2/3 (blue) for positive angles; saturation depends on angle amplitude
         angle_quality_masked = quality_mask * angle * 2 / np.pi
-        angle_quality_masked = tf.concat([(tf.sign(angle_quality_masked)+1.0)/3.0 , tf.abs(angle_quality_masked), tf.ones_like(angle_quality_masked)], axis=3)  
+        angle_quality_masked = tf.concat([(tf.sign(angle_quality_masked)+1.0)/3.0 , tf.abs(angle_quality_masked), tf.ones_like(angle_quality_masked)], axis=3)
         angle_quality_masked = tf.image.hsv_to_rgb(angle_quality_masked)
-        
+
         width_quality_masked = quality_mask * width_output
-        width_quality_masked = tf.concat([tf.zeros_like(width_quality_masked) , width_quality_masked, tf.ones_like(width_quality_masked)], axis=3)  
+        width_quality_masked = tf.concat([tf.zeros_like(width_quality_masked) , width_quality_masked, tf.ones_like(width_quality_masked)], axis=3)
         width_quality_masked = tf.image.hsv_to_rgb(width_quality_masked)
 
         images = {
@@ -187,10 +201,10 @@ class OAHOModel(BaseModel):
 
 
     @staticmethod
-    def _create_detection_head(quality: tf.Tensor, angle: tf.Tensor, width: tf.Tensor) -> tf.Tensor:        
+    def _create_detection_head(quality: tf.Tensor, angle: tf.Tensor, width: tf.Tensor) -> tf.Tensor:
 
         # b,h,w,d = pos_output.shape
-        # quality = 
+        # quality =
         out_shape = tf.shape(quality)
         b, h, w, d = out_shape[0], out_shape[1], out_shape[2], out_shape[3]
 

@@ -9,10 +9,13 @@ from data_loader.oaho_loader import TFRecordDataLoader
 FLAGS = tf.app.flags.FLAGS
 
 config = {
-  'train_files': ['data/check/oaho_synth_test.tfrecord', 'data/check/oaho_synth_test_01.tfrecord', 'data/check/oaho_synth_val_01.tfrecord']
+  'train_files': ['data/check/oaho_synth_test.tfrecord', 'data/check/oaho_synth_test_01.tfrecord', 'data/check/oaho_synth_val_01.tfrecord'],
+  'test_files': ['data/oaho_synth_test.tfrecord']
 }
 
+
 FLAGS.train_files = [f for f in config['train_files'] if os.path.exists(os.path.abspath(f))]
+FLAGS.test_files = [f for f in config['test_files'] if os.path.exists(os.path.abspath(f))]
 FLAGS.train_batch_size = 4
 FLAGS.train_shuffle_buffer_size = 10
 FLAGS.grasp_annotation_format = 'grasp_configurations'
@@ -23,6 +26,11 @@ train_data = TFRecordDataLoader(config, mode='train')
 train_dataset = train_data.input_fn()
 train_iter = train_dataset.make_one_shot_iterator()
 train_input, train_target = train_iter.get_next()
+
+test_data = TFRecordDataLoader(config, mode='test')
+test_dataset = test_data.input_fn()
+test_iter = test_dataset.make_one_shot_iterator()
+test_input, test_target = test_iter.get_next()
 
 
 np.random.seed(42)
@@ -131,7 +139,7 @@ def update_op_fn(groundtruth_grasps_batched, detection_grasps_batched):
 
 
 
-update_op = tf.py_function(update_op_fn, [groundtruth_grasps, detection_grasps], [])
+update_op = tf.py_func(update_op_fn, [groundtruth_grasps, detection_grasps], [])
 
 
 def gaussian_kernel(size: int, mean: float, std: float):
@@ -160,7 +168,8 @@ blurred_image_result = sess.run(blurred_image)
 
 #cv2.imwrite('blurred_image_temp.png', np.uint8(255*blurred_image_result[0]))
 
-
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 def plot_batch():
@@ -180,7 +189,45 @@ def plot_batch():
       plt.xticks([]); plt.yticks([])
   plt.show()
 
-plot_batch()
+#plot_batch()
+
+
+from tensorflow.contrib import predictor
+import time
+
+model_dir = 'out/exports/1564573334/'
+predict_fn = predictor.from_saved_model(model_dir)
+predict_seg_fn = predictor.from_saved_model(model_dir, 'segmentation')
+seg_colors = np.array([[0, 0, 0], [255, 0, 0], [0, 255, 0], [0, 0, 255]], dtype=np.uint8)         
+
+n_eval = 0
+while True:
+  try:
+    test_input_img_batch = sess.run([test_input])
+    tic = time.time()
+    pred = predict_fn(test_input_img_batch[0])
+    toc = time.time()
+    pred_seg = predict_seg_fn(test_input_img_batch[0])
+    plt.figure()
+    plt.subplot(2,3,1); plt.imshow(np.reshape(test_input_img_batch[0]['input'], (480,640)), cmap='gray'); plt.xticks([]); plt.yticks([])
+    
+    plt.subplot(2,3,2); plt.imshow(seg_colors[np.reshape(pred_seg['classes'], (480,640))]); plt.xticks([]); plt.yticks([])
+
+
+    plt.subplot(2,3,4); plt.imshow(np.reshape(pred['quality'], (480,640)), cmap='gray'); plt.xticks([]); plt.yticks([])
+    plt.subplot(2,3,5); plt.imshow(np.reshape(pred['angle'], (480,640)), cmap='gray'); plt.xticks([]); plt.yticks([])
+    plt.subplot(2,3,6); plt.imshow(np.reshape(pred['width'], (480,640)), cmap='gray'); plt.xticks([]); plt.yticks([])
+    plt.tight_layout()
+    plt.savefig('data/eval_{}.png'.format(n_eval))
+    plt.close()
+    
+    n_eval = n_eval + 1
+    print('time: {} fps: {}'.format(toc-tic, 1.0/(toc-tic)))
+  except tf.errors.OutOfRangeError:
+    break
+
+
+
 
 
 #print(parsed_features)

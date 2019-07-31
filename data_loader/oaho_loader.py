@@ -42,6 +42,7 @@ class TFRecordDataLoader(DataLoader):
             self.batch_size = FLAGS.eval_batch_size
         else:
             self.file_names = FLAGS.test_files
+            self.batch_size = 1
 
     def input_fn(self) -> tf.data.Dataset:
         """
