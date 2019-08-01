@@ -5,6 +5,7 @@ import tensorflow as tf
 from models.oaho_model_deeplab import OAHOModelDeeplab
 from models.oaho_model import OAHOModel
 from models.oaho_model_fcn import OAHOModelFCN
+from models.oaho_model_deeplab_deconv import OAHOModelDeeplabDeconv
 FLAGS = tf.app.flags.FLAGS
 
 
@@ -28,5 +29,7 @@ def oaho_model_from_config(config: Dict) -> OAHOModel:
         return OAHOModelFCN(config)
     elif model_cfg['architecture'] == 'deeplab':
         return OAHOModelDeeplab(config)
+    elif model_cfg['architecture'] == 'deeplab_deconv':
+        return OAHOModelDeeplabDeconv(config)
     else:
         raise Exception('Unknown model architecture {}'.format(model_cfg['architecture']))

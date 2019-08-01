@@ -295,6 +295,14 @@ class OAHOModel(BaseModel):
         width_output = kl.Conv2D(1, kernel_size=2, padding='same', name='width_out')(grasp_head)
         return seg_output, pos_output, cos_output, sin_output, width_output
 
+    @staticmethod
+    def _preprocess_robot_reach_zero_mean_unit_range(inputs, dtype=tf.float32):
+        """Map image depth values from [0, 2] to [-128., 128.]."""
+        preprocessed_inputs = 128.0*(tf.to_float(inputs) - 1.0)
+        return tf.cast(preprocessed_inputs, dtype=dtype)
+
+
+
 
 
 def gaussian_kernel(size: int, mean: float, std: float):
