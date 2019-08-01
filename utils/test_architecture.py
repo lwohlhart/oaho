@@ -6,8 +6,7 @@ import cv2
 
 import utils.task_utils as task_utils
 from data_loader.oaho_loader import TFRecordDataLoader
-from utils.oaho_visualization import OAHODetectionVisualizer
-from metrics.oaho_evaluation import OAHODetectionEvaluator
+
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -197,26 +196,48 @@ def plot_batch():
 
 from tensorflow.contrib import predictor
 import time
+from glob import glob
+from utils.oaho_visualization import visualize_boxes_and_labels_on_image_array
+# from metrics.oaho_evaluation import OAHODetectionEvaluator
+import PIL.Image as Image
 
-model_dir = 'out/exports/1564573334/'
+model_exports_dir = 'out/exports/'
+model_dir = sorted(glob('out/exports/*'))[-1]
+
 predict_fn = predictor.from_saved_model(model_dir)
 predict_seg_fn = predictor.from_saved_model(model_dir, 'segmentation')
-seg_colors = np.array([[0, 0, 0], [255, 0, 0], [0, 255, 0], [0, 0, 255]], dtype=np.uint8)         
+predict_grasp_fn = predictor.from_saved_model(model_dir, 'grasp')
 
-visualizer = OAHODetectionVisualizer()
+seg_colors = np.array([[0, 0, 0], [255, 0, 0], [0, 255, 0], [0, 0, 255]], dtype=np.uint8)
+
+# visualizer = OAHODetectionVisualizer()
 n_eval = 0
 while True:
   try:
     test_input_batch, test_target_batch = sess.run([test_input, test_target])
-    test_target_batch
+
     tic = time.time()
-    pred = predict_fn(test_input_batch[0])
+    pred = predict_fn(test_input_batch)
     toc = time.time()
-    pred_seg = predict_seg_fn(test_input_batch[0])
+    pred_seg = predict_seg_fn(test_input_batch)
+    pred_grasp = predict_grasp_fn(test_input_batch)
+
+    ground_truth_grasps = np.reshape(test_target_batch['grasps'].values, (-1,4))
+
+    input_image = np.repeat(np.uint8(255*np.reshape(test_input_batch['input'] / test_input_batch['input'].max(), (480,640,1))), 3, 2)
+    gt_img_pil = visualize_boxes_and_labels_on_image_array(np.copy(input_image), ground_truth_grasps, segmentation=seg_colors[np.reshape(test_target_batch['seg'], (480,640))])
+    gt_img = np.array(gt_img_pil)
+
+    pred_grasp = np.reshape(pred_grasp['grasp'], (-1,4))
+    pred_img_pil = visualize_boxes_and_labels_on_image_array(np.copy(input_image), pred_grasp, segmentation=seg_colors[np.reshape(pred_seg['classes'], (480,640))])
+    pred_img = np.array(pred_img_pil)
+
     plt.figure()
-    plt.subplot(2,3,1); plt.imshow(np.reshape(test_input_batch[0]['input'], (480,640)), cmap='gray'); plt.xticks([]); plt.yticks([])
-    
-    plt.subplot(2,3,2); plt.imshow(seg_colors[np.reshape(pred_seg['classes'], (480,640))]); plt.xticks([]); plt.yticks([])
+    plt.subplot(2,3,1); plt.imshow(np.reshape(test_input_batch['input'], (480,640)), cmap='gray'); plt.xticks([]); plt.yticks([])
+    plt.subplot(2,3,2); plt.imshow(gt_img); plt.xticks([]); plt.yticks([])
+
+    plt.subplot(2,3,3); plt.imshow(pred_img); plt.xticks([]); plt.yticks([])
+
 
 
     plt.subplot(2,3,4); plt.imshow(np.reshape(pred['quality'], (480,640)), cmap='gray'); plt.xticks([]); plt.yticks([])
