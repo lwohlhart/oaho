@@ -142,13 +142,13 @@ class OAHOModel(BaseModel):
         if mode == tf.estimator.ModeKeys.EVAL:
             # TODO: update evaluation metrics
             # output eval images
-            # eval_summary_hook = tf.train.SummarySaverHook(summary_op=images, save_secs=120)
+            eval_summary_hook = tf.train.SummarySaverHook(save_steps=1, summary_op=tf.summary.merge_all(), output_dir= FLAGS.job_dir + "/eval_core")
             summaries_dict = {
                 'val_mean_iou': tf.metrics.mean_iou(
                     labels['seg'], predictions=predictions['segmentation'], num_classes=4
                 )
             }
-            summaries_dict.update(losses_dict)
+            # summaries_dict.update(losses_dict)
             # summaries_dict.update(images)
             # summaries_dict.update(get_estimator_eval_metric_ops)
             b = tf.shape(quality)[0]
@@ -176,7 +176,7 @@ class OAHOModel(BaseModel):
                                                                                 'detection_segmentation': segmentation_image
             }))
             return tf.estimator.EstimatorSpec(
-                mode=mode, loss=loss, eval_metric_ops=summaries_dict#, evaluation_hooks=[eval_summary_hook]
+                mode=mode, loss=loss, eval_metric_ops=summaries_dict, evaluation_hooks=[eval_summary_hook]
             )
 
         # assert only reach this point during training
