@@ -6,6 +6,9 @@ import cv2
 
 import utils.task_utils as task_utils
 from data_loader.oaho_loader import TFRecordDataLoader
+from utils.oaho_visualization import OAHODetectionVisualizer
+from metrics.oaho_evaluation import OAHODetectionEvaluator
+
 FLAGS = tf.app.flags.FLAGS
 
 config = {
@@ -200,16 +203,18 @@ predict_fn = predictor.from_saved_model(model_dir)
 predict_seg_fn = predictor.from_saved_model(model_dir, 'segmentation')
 seg_colors = np.array([[0, 0, 0], [255, 0, 0], [0, 255, 0], [0, 0, 255]], dtype=np.uint8)         
 
+visualizer = OAHODetectionVisualizer()
 n_eval = 0
 while True:
   try:
-    test_input_img_batch = sess.run([test_input])
+    test_input_batch, test_target_batch = sess.run([test_input, test_target])
+    test_target_batch
     tic = time.time()
-    pred = predict_fn(test_input_img_batch[0])
+    pred = predict_fn(test_input_batch[0])
     toc = time.time()
-    pred_seg = predict_seg_fn(test_input_img_batch[0])
+    pred_seg = predict_seg_fn(test_input_batch[0])
     plt.figure()
-    plt.subplot(2,3,1); plt.imshow(np.reshape(test_input_img_batch[0]['input'], (480,640)), cmap='gray'); plt.xticks([]); plt.yticks([])
+    plt.subplot(2,3,1); plt.imshow(np.reshape(test_input_batch[0]['input'], (480,640)), cmap='gray'); plt.xticks([]); plt.yticks([])
     
     plt.subplot(2,3,2); plt.imshow(seg_colors[np.reshape(pred_seg['classes'], (480,640))]); plt.xticks([]); plt.yticks([])
 
@@ -220,7 +225,7 @@ while True:
     plt.tight_layout()
     plt.savefig('data/eval_{}.png'.format(n_eval))
     plt.close()
-    
+
     n_eval = n_eval + 1
     print('time: {} fps: {}'.format(toc-tic, 1.0/(toc-tic)))
   except tf.errors.OutOfRangeError:

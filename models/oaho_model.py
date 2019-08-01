@@ -30,7 +30,7 @@ class OAHOModel(BaseModel):
         is_training = mode == tf.estimator.ModeKeys.TRAIN
 
         # initialise model architecture
-        seg_output, pos_output, cos_output, sin_output, width_output = self._create_model(features['input'], is_training)
+        seg_output, pos_output, cos_output, sin_output, width = self._create_model(features['input'], is_training)
         segmentation_classes = tf.argmax(input=seg_output, axis=3, output_type=tf.int32)
         # TODO: update model predictions
 
@@ -46,7 +46,7 @@ class OAHOModel(BaseModel):
             'segmentation_probabilities': tf.nn.softmax(seg_output),
             'quality': quality,
             'angle': angle,
-            'width': width_output*150.0
+            'width': width*150.0
         }
 #
         if mode == tf.estimator.ModeKeys.PREDICT:
@@ -61,6 +61,9 @@ class OAHOModel(BaseModel):
                     'quality': predictions['quality'],
                     'angle': predictions['angle'],
                     'width': predictions['width'],
+                }),
+                'grasp': tf.estimator.export.PredictOutput({
+                    'grasp': self._create_detection_head(quality, angle, width)
                 })
             }
             return tf.estimator.EstimatorSpec(
@@ -86,7 +89,7 @@ class OAHOModel(BaseModel):
 
         sin_loss = tf.losses.mean_squared_error(labels=labels['angle_sin'], predictions=sin_output, weights=grasp_loss_mask)
         cos_loss = tf.losses.mean_squared_error(labels=labels['angle_cos'], predictions=cos_output, weights=grasp_loss_mask)
-        width_loss = tf.losses.mean_squared_error(labels=(labels['gripper_width'] / 150.0), predictions=width_output, weights=grasp_loss_mask)
+        width_loss = tf.losses.mean_squared_error(labels=(labels['gripper_width'] / 150.0), predictions=width, weights=grasp_loss_mask)
 
 
 
@@ -96,12 +99,14 @@ class OAHOModel(BaseModel):
         segmentations_class_colors = tf.convert_to_tensor([[0, 0, 0], [255, 0, 0], [0, 255, 0], [0, 0, 255]], dtype=tf.uint8)
         segmentation_image = tf.gather(segmentations_class_colors, segmentation_classes)
 
-        tf.summary.scalar('seg_loss', seg_loss)
-        tf.summary.scalar('quality_loss', quality_loss)
-        tf.summary.scalar('angle_sin_loss', sin_loss)
-        tf.summary.scalar('angle_cos_loss', cos_loss)
-        tf.summary.scalar('width_loss', width_loss)
-        tf.summary.scalar('loss', loss)
+        losses_dict = {
+            'seg_loss': tf.summary.scalar('seg_loss', seg_loss),
+            'quality_loss': tf.summary.scalar('quality_loss', quality_loss),
+            'angle_sin_loss': tf.summary.scalar('angle_sin_loss', sin_loss),
+            'angle_cos_loss': tf.summary.scalar('angle_cos_loss', cos_loss),
+            'width_loss': tf.summary.scalar('width_loss', width_loss),
+            'loss': tf.summary.scalar('loss', loss)
+        }
 
 
 
@@ -113,7 +118,7 @@ class OAHOModel(BaseModel):
         angle_quality_masked = tf.concat([(tf.sign(angle_quality_masked)+1.0)/3.0 , tf.abs(angle_quality_masked), tf.ones_like(angle_quality_masked)], axis=3)
         angle_quality_masked = tf.image.hsv_to_rgb(angle_quality_masked)
 
-        width_quality_masked = quality_mask * width_output
+        width_quality_masked = quality_mask * width
         width_quality_masked = tf.concat([tf.zeros_like(width_quality_masked) , width_quality_masked, tf.ones_like(width_quality_masked)], axis=3)
         width_quality_masked = tf.image.hsv_to_rgb(width_quality_masked)
 
@@ -123,7 +128,7 @@ class OAHOModel(BaseModel):
             'quality': tf.summary.image('quality', quality),
             'angle_sin': tf.summary.image('angle_sin', sin_output),
             'angle_cos': tf.summary.image('angle_cos', cos_output),
-            'width': tf.summary.image('width', width_output),
+            'width': tf.summary.image('width', width),
             'angle': tf.summary.image('angle', angle),
             'angle_quality_masked': tf.summary.image('angle_quality_masked', angle_quality_masked),
             'width_quality_masked': tf.summary.image('width_quality_masked', width_quality_masked)
@@ -143,11 +148,12 @@ class OAHOModel(BaseModel):
                     labels['seg'], predictions=predictions['segmentation'], num_classes=4
                 )
             }
+            summaries_dict.update(losses_dict)
             # summaries_dict.update(images)
             # summaries_dict.update(get_estimator_eval_metric_ops)
             b = tf.shape(quality)[0]
 
-            detection_grasps = self._create_detection_head(quality, angle, width_output)
+            detection_grasps = self._create_detection_head(quality, angle, width)
 
             detection_evaluator = OAHODetectionEvaluator()
             detection_visualizer = OAHODetectionVisualizer()
