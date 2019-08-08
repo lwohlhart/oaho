@@ -72,10 +72,17 @@ class OAHOModel(BaseModel):
 
         # calculate loss
         # specify some class weightings
-        segmentation_class_weights = tf.constant([1, 5, 1, 5])
+        # class_priors = np.array([0.821, 0.016, 0.1556, 0.0074])
+        # segmentation_class_weights  = (len(class_priors) * (1.0/class_priors)/np.sum(1.0/class_priors))
+        segmentation_class_weights = tf.constant([0.02373397, 1.2178494 , 0.12522873, 2.6331879 ]) # tf.constant([1, 5, 1, 5])
 
         # specify the weights for each sample in the batch (without having to compute the onehot label matrix)
-        segmentation_weights = tf.gather(segmentation_class_weights, labels['seg'])
+        segmentation_weights_labels = tf.gather(segmentation_class_weights, labels['seg'])
+        segmentation_weights_prediction = tf.gather(segmentation_class_weights, segmentation_classes)
+        
+        # segmentation_weights = tf.gather(segmentation_class_weights, labels['seg'])
+        # try this; to counteract class imbalance  
+        segmentation_weights = tf.maximum(segmentation_weights_labels, segmentation_weights_prediction)
 
         seg_loss = tf.losses.sparse_softmax_cross_entropy(labels=labels['seg'], logits=seg_output, weights=segmentation_weights)
         # seg_loss = tf.losses.sparse_softmax_cross_entropy(labels=labels['seg'], logits=seg_output)
