@@ -6,6 +6,7 @@ from models.oaho_model_deeplab import OAHOModelDeeplab
 from models.oaho_model import OAHOModel
 from models.oaho_model_fcn import OAHOModelFCN
 from models.oaho_model_deeplab_deconv import OAHOModelDeeplabDeconv
+from models.oaho_model_residual_unet import OAHOModelResidualUnet
 FLAGS = tf.app.flags.FLAGS
 
 
@@ -31,5 +32,7 @@ def oaho_model_from_config(config: Dict) -> OAHOModel:
         return OAHOModelDeeplab(config)
     elif model_cfg['architecture'] == 'deeplab_deconv':
         return OAHOModelDeeplabDeconv(config)
+    elif model_cfg['architecture'] == 'residual_unet':
+        return OAHOModelResidualUnet(config)
     else:
         raise Exception('Unknown model architecture {}'.format(model_cfg['architecture']))

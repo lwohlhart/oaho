@@ -78,7 +78,7 @@ class OAHOModel(BaseModel):
 
         # specify the weights for each sample in the batch (without having to compute the onehot label matrix)
         segmentation_weights_labels = tf.gather(segmentation_class_weights, labels['seg'])
-        segmentation_weights_prediction = tf.gather(segmentation_class_weights, segmentation_classes)
+        segmentation_weights_prediction = tf.gather(segmentation_class_weights, tf.expand_dims(segmentation_classes,-1))
         
         # segmentation_weights = tf.gather(segmentation_class_weights, labels['seg'])
         # try this; to counteract class imbalance  
