@@ -42,7 +42,7 @@ class OAHOModelResidualUnet(OAHOModel):
                           skip_connection: tf.Tensor = None) -> tf.Tensor:
             with tf.name_scope(scope):                          
                 x = input_tensor
-                x = kl.UpSampling2D(interpolation='bilinear')(x)
+                x = kl.UpSampling2D()(x)
                 if skip_connection is not None:
                     x = kl.Concatenate()([x, skip_connection])
                 x = kl.Conv2D(feature_maps, kernel_size=kernel_size, strides=strides, padding='same')(x)
@@ -73,7 +73,7 @@ class OAHOModelResidualUnet(OAHOModel):
         x, enc_skip_3 = encoder_block(x, 128, (3, 3), (1, 1), is_training=is_training, scope='encoder_block3')
         x, enc_skip_4 = encoder_block(x, 256, (3, 3), (1, 1), is_training=is_training, scope='encoder_block4')
 
-        x = bottleneck = dilated_bottleneck(x, 512, (3, 3), [1, 2, 4], is_training=is_training, scope='aspp')
+        x = bottleneck = dilated_bottleneck(x, 512, (3, 3), [1, 2, 4, 8], is_training=is_training, scope='aspp')
 
         x = dec4 = decoder_block(x, 256, (3, 3), (1, 1), is_training=is_training, scope='decoder_block4', skip_connection=enc_skip_4)
         x = dec3 = decoder_block(x, 128, (3, 3), (1, 1), is_training=is_training, scope='decoder_block3', skip_connection=enc_skip_3)
