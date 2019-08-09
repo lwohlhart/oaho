@@ -108,4 +108,6 @@ python3 -m initialisers.task \
         --model_def "${MODEL_DEF}" \
 &>runlogs/$JOB_NAME.log & echo "$!" > runlogs/$JOB_NAME.pid
 
-echo "Job launched."
+echo "Job launched. Showing log at runlogs/$JOB_NAME.log (CTRL-C to abort watching the log)"
+sleep 5
+tail -f runlogs/$JOB_NAME.log
