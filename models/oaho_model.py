@@ -51,9 +51,18 @@ class OAHOModel(BaseModel):
 #
         if mode == tf.estimator.ModeKeys.PREDICT:
             # TODO: update output during serving
+            grasp_head = self._create_detection_head(quality, angle, width)
             export_outputs = {
+                'all': tf.estimator.export.PredictOutput({
+                    # 'scores': predictions['segmentation_probabilities'],
+                    'classes':predictions['segmentation'],
+                    'quality': predictions['quality'],
+                    'angle': predictions['angle'],
+                    'width': predictions['width'],
+                    'grasp': grasp_head
+                }),
                 'segmentation': tf.estimator.export.PredictOutput({
-                    'scores': predictions['segmentation_probabilities'],
+                    # 'scores': predictions['segmentation_probabilities'],
                     'classes':predictions['segmentation']
                 }),
                 tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY:
@@ -63,7 +72,7 @@ class OAHOModel(BaseModel):
                     'width': predictions['width'],
                 }),
                 'grasp': tf.estimator.export.PredictOutput({
-                    'grasp': self._create_detection_head(quality, angle, width)
+                    'grasp': grasp_head
                 })
             }
             return tf.estimator.EstimatorSpec(
@@ -205,8 +214,8 @@ class OAHOModel(BaseModel):
         if FLAGS.learning_rate_decay_type == 'piecewise':
             lr = tf.train.piecewise_constant(
                 global_step,
-                [5000, 10000, 50000],
-                [0.1, 0.01, 0.001, 0.0001],
+                [5000, 10000],
+                [0.001, 0.0005, 0.0001],
                 name='learning_rate'
         )
         else:
