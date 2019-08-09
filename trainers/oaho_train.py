@@ -85,15 +85,8 @@ class OAHOTrainer(BaseTrain):
         """
         # this should match the input shape of your model
         # TODO: update this to your input used in prediction/serving
-        x1 = tf.feature_column.numeric_column(
-            "input", shape=[480, 640, 1]
-        )
-        # create a list in case you have more than one input
-        feature_columns = [x1]
-        feature_spec = tf.feature_column.make_parse_example_spec(feature_columns)
-        export_input_fn = tf.estimator.export.build_parsing_serving_input_receiver_fn(
-            feature_spec
-        )
+        features = {'input': tf.placeholder(dtype=tf.float32, shape=[None, 480, 640, 1], name='input')}
+        export_input_fn = tf.estimator.export.build_raw_serving_input_receiver_fn(features)
         # export the saved model
         estimator.export_savedmodel(save_location, export_input_fn)
 
