@@ -31,7 +31,16 @@ flags.DEFINE_spaceseplist(
 )
 # Training arguments
 flags.DEFINE_float(
-    "learning_rate", 0.001, "Learning rate for the optimizer"
+    "learning_rate", 0.01, "Learning rate for the optimizer"
+)
+flags.DEFINE_float(
+    "learning_rate_decay", 0.96, "Learning rate decay for the optimizer"
+)
+flags.DEFINE_float(
+    "learning_rate_decay_steps", 1e4, "Learning rate decay steps for the optimizer"
+)
+flags.DEFINE_string(
+    "learning_rate_decay_type", 'piecewise', "Learning rate decay type for the optimizer"
 )
 flags.DEFINE_string(
     "job_dir", None, "GCS location to write checkpoints and export models"

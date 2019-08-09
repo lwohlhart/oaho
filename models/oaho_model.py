@@ -190,16 +190,35 @@ class OAHOModel(BaseModel):
         assert mode == tf.estimator.ModeKeys.TRAIN
 
         # create learning rate variable for hyper param tuning
-        lr = tf.Variable(
-            initial_value=FLAGS.learning_rate, name='learning-rate'
+        
+        global_step = tf.train.get_global_step()
+        
+        if FLAGS.learning_rate_decay_type == 'exp':
+            lr = tf.train.exponential_decay(
+                FLAGS.learning_rate,
+                global_step,
+                FLAGS.learning_rate_decay_steps,
+                FLAGS.learning_rate_decay,
+                staircase=True,
+                name='learning_rate'
+            )
+        if FLAGS.learning_rate_decay_type == 'piecewise':
+            lr = tf.train.piecewise_constant_decay(
+                global_step,
+                [5000, 10000, 50000],
+                [0.1, 0.01, 0.001, 0.0001],
+                name='learning_rate'
         )
+        else:
+            lr = tf.Variable(initial_value=FLAGS.learning_rate, name='learning_rate')
+
 
         # TODO: update optimiser
         optimizer = tf.train.AdamOptimizer(lr)
 
         train_op = optimizer.minimize(
             loss,
-            global_step=tf.train.get_global_step(),
+            global_step=global_step,
             colocate_gradients_with_ops=True,
         )
 
