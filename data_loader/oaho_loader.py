@@ -33,6 +33,8 @@ class TFRecordDataLoader(DataLoader):
         """
         super().__init__(config, mode)
 
+        self.config['depth_mean'] = 2.0
+        
         # Get a list of files in case you are using multiple tfrecords
         if self.mode == 'train':
             self.file_names = FLAGS.train_files
@@ -110,7 +112,7 @@ class TFRecordDataLoader(DataLoader):
             w, h = 640, 480
             dim = (h,w,1)
 
-            depth = tf.reshape(parsed_features['depth'], dim)
+            depth = tf.reshape(parsed_features['depth'], dim) - self.config['depth_mean']
             seg = tf.cast(tf.image.decode_image(parsed_features['segmentation/raw']), dtype=tf.int32)
             seg.set_shape(depth.shape)
 
