@@ -203,7 +203,7 @@ class OAHOModel(BaseModel):
                 name='learning_rate'
             )
         if FLAGS.learning_rate_decay_type == 'piecewise':
-            lr = tf.train.piecewise_constant_decay(
+            lr = tf.train.piecewise_constant(
                 global_step,
                 [5000, 10000, 50000],
                 [0.1, 0.01, 0.001, 0.0001],
