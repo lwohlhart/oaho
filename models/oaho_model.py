@@ -219,7 +219,7 @@ class OAHOModel(BaseModel):
                 name='learning_rate'
         )
         else:
-            lr = tf.Variable(initial_value=FLAGS.learning_rate, name='learning_rate')
+            lr = tf.constant(FLAGS.learning_rate, name='learning_rate')
 
 
         # TODO: update optimiser

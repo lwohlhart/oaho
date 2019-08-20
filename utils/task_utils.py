@@ -40,7 +40,7 @@ flags.DEFINE_float(
     "learning_rate_decay_steps", 1e4, "Learning rate decay steps for the optimizer"
 )
 flags.DEFINE_string(
-    "learning_rate_decay_type", 'piecewise', "Learning rate decay type for the optimizer"
+    "learning_rate_decay_type", 'none', "Learning rate decay type for the optimizer"
 )
 flags.DEFINE_string(
     "job_dir", None, "GCS location to write checkpoints and export models"
