@@ -10,8 +10,12 @@ fi
 echo -e "\e[33mHi, please login at rob_file with your JR credentials (Domain: jr1)\e[0m"
 gvfs-mount smb://rzjna01/rob_file/
 
+PREFIX=${1:-oaho}
+echo $PREFIX
 #RECORDS=$(gvfs-ls smb://rzjna01/rob_file/staff/wol/oaho/data/)
-RECORDS=$(gvfs-ls -c smb://rzjna01/rob_file/staff/wol/oaho/data/oaho)
+RECORDS=$(gvfs-ls -c smb://rzjna01/rob_file/staff/wol/oaho/data/$PREFIX)
+echo $RECORDS
+
 for record in $RECORDS;
 do
   #gvfs-copy -i -p smb://rzjna01/rob_file/staff/wol/oaho/data/$record .
