@@ -194,13 +194,13 @@ class OAHODetectionEvaluator(object):
 
     @staticmethod
     def get_max_iou(groundtruth, detections):
-        groundtruth_grasps = [Grasp((g[1], g[0]), g[2], g[3], g[3]/2.0) for g in groundtruth]]
+        groundtruth_grasps = [Grasp((g[1], g[0]), g[2], g[3], g[3]/2.0) for g in groundtruth]
         groundtruth_bbs = [g.as_bb for g in groundtruth_grasps]
 
-        detected_grasps = [Grasp((g[1], g[0]), g[2], g[3], g[3]/2.0) for g in detections]]
+        detected_grasps = [Grasp((g[1], g[0]), g[2], g[3], g[3]/2.0) for g in detections]
 
         max_iou_per_detected_grasp = [g.max_iou(groundtruth_bbs) for g in detected_grasps]
-        return max_iou_per_detected_grasp
+        return np.array(max_iou_per_detected_grasp)
 
     def get_estimator_eval_metric_ops(self, eval_dict):
         """Returns a dictionary of eval metric ops to use with `tf.EstimatorSpec`.
