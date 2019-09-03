@@ -198,7 +198,7 @@ from tensorflow.contrib import predictor
 import time
 from glob import glob
 from utils.oaho_visualization import visualize_boxes_and_labels_on_image_array
-# from metrics.oaho_evaluation import OAHODetectionEvaluator
+from metrics.oaho_evaluation import OAHODetectionEvaluator
 import PIL.Image as Image
 
 model_exports_dir = 'out/exports/'
@@ -210,9 +210,11 @@ predict_grasp_fn = predictor.from_saved_model(model_dir, 'grasp')
 
 seg_colors = np.array([[0, 0, 0], [255, 0, 0], [0, 255, 0], [0, 0, 255]], dtype=np.uint8)
 
-# visualizer = OAHODetectionVisualizer()
+detections_file = open('data/detections.txt', 'w')
+detections = []
+n_test_samples = len(test_data)
 n_eval = 0
-while True:
+for n_eval in range(n_test_samples): # while True:
   try:
     test_input_batch, test_target_batch = sess.run([test_input, test_target])
 
@@ -244,16 +246,26 @@ while True:
     plt.subplot(2,3,5); plt.imshow(np.reshape(pred['angle'], (480,640)), cmap='gray'); plt.xticks([]); plt.yticks([])
     plt.subplot(2,3,6); plt.imshow(np.reshape(pred['width'], (480,640)), cmap='gray'); plt.xticks([]); plt.yticks([])
     plt.tight_layout()
-    plt.savefig('data/eval_{}.png'.format(n_eval))
+    eval_filename = 'data/eval_{}.png'.format(n_eval)
+    plt.savefig(eval_filename)
     plt.close()
 
-    n_eval = n_eval + 1
+
+    grasp_ious = OAHODetectionEvaluator.get_max_iou(ground_truth_grasps, pred_grasp)
+    # print(grasp_ious)
+    if (grasp_ious >= 0.25).any():
+      detections.append(1.0)
+      detections_file.write('DETECTED {} {} {} {}\n'.format(eval_filename, test_target_batch['id'], grasp_ious, pred_grasp))
+    else:
+      detections.append(0.0)
+      detections_file.write('FAILED {} {} {} {}\n'.format(eval_filename, test_target_batch['id'], grasp_ious, pred_grasp))
+    detections_file.flush()
+
+    #n_eval = n_eval + 1
     print('time: {} fps: {}'.format(toc-tic, 1.0/(toc-tic)))
+    print('detected {}/{}  ->  {}'.format(int(np.sum(detections)), n_eval+1, np.mean(detections)))
   except tf.errors.OutOfRangeError:
     break
 
-
-
-
-
+detections_file.close()
 #print(parsed_features)
