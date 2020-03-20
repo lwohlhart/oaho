@@ -45,9 +45,6 @@ flags.DEFINE_string(
 flags.DEFINE_string(
     "job_dir", None, "GCS location to write checkpoints and export models"
 )
-flags.DEFINE_enum(
-    "verbosity", "DEBUG", ["DEBUG", "ERROR", "FATAL", "INFO", "WARN"], "Set logging verbosity",
-)
 
 flags.DEFINE_float(
     "keep_prob", 0.5, "Keep probability for dropout"
@@ -93,7 +90,7 @@ def get_args() -> dict:
     flags.mark_flag_as_required('train_files')
 
     # Set C++ Graph Execution level verbosity
-    os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(tf.logging.__dict__[FLAGS.verbosity] / 10)
+    os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(FLAGS.verbosity)
 
     # if unknown:
     #     tf.logging.warn("Unknown arguments: {}".format(unknown))
