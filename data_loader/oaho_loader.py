@@ -95,6 +95,10 @@ class TFRecordDataLoader(DataLoader):
                 'height': tf.io.FixedLenFeature((), tf.int64),
                 'grasps': tf.io.VarLenFeature(dtype=tf.float32)
             }
+            if self.config['model']['input_format'] == 'rgbd':
+                features.update({
+                    'rgb/raw': tf.io.FixedLenFeature([], tf.string)
+                })
             if FLAGS.grasp_annotation_format == 'grasp_images':
                 features.update({
                     'quality': tf.io.FixedLenFeature((640*480), tf.float32),
@@ -130,9 +134,20 @@ class TFRecordDataLoader(DataLoader):
                 angle_cos.set_shape(depth.shape)
                 gripper_width.set_shape(depth.shape)
 
-            feature_dict = {
-                'input': depth
-            }
+
+            if self.config['model']['input_format'] == 'rgbd':
+                rgb = ( tf.cast(tf.image.decode_image(parsed_features['rgb/raw']), dtype=tf.float32) / 128.0 ) - 1.0
+                rgb.set_shape((h,w,3))
+                feature_dict = {
+                    'rgb': rgb,
+                    'depth': depth
+                }
+            elif self.config['model']['input_format'] == 'd': 
+                feature_dict = {
+                    'depth': depth
+                }
+            else:
+                raise NotImplementedError('Unknown input format {}'.format(self.config['model']['input_format']))
             target_dict = {
                 'seg': seg,
                 'quality': quality,

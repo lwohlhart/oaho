@@ -85,10 +85,12 @@ class OAHOModelResidualUnet(OAHOModel):
         # ===================================================================================================
         # Output layers
         # seg_head = kl.Conv2D(32, kernel_size=2, padding='same', name='seg_head_1', activation='relu')(features_decoder)
-        seg_output = kl.Conv2D(4, kernel_size=1, padding='same', name='seg_out')(x)
-        
-        # grasp_head = kl.Conv2D(32, kernel_size=1, padding='same', name='grasp_head_1', activation='relu')(features_decoder)
-        grasp_head = tf.keras.layers.concatenate([x, seg_output])
+        if self.config['model']['use_segmentation']:
+            seg_output = kl.Conv2D(OAHOModel.NUM_SEGMENTATION_CLASSES, kernel_size=1, padding='same', name='seg_out')(x)
+            grasp_head = tf.keras.layers.concatenate([x, seg_output]) # add segmentation for grasp head
+        else:
+            seg_output = tf.zeros([*x.shape[:-1], tf.Dimension(OAHOModel.NUM_SEGMENTATION_CLASSES)], name='fake_seg_out')
+            grasp_head = x
         pos_output = kl.Conv2D(1, kernel_size=1, padding='same', name='pos_out')(grasp_head)
         cos_output = kl.Conv2D(1, kernel_size=1, padding='same', name='cos_out')(grasp_head)
         sin_output = kl.Conv2D(1, kernel_size=1, padding='same', name='sin_out')(grasp_head)

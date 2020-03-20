@@ -39,7 +39,9 @@ if __name__ == '__main__':
     # intialise the estimator with your model
     estimator = tf.estimator.Estimator(model_fn=model.model, config=run_config)
 
-    features = {'input': tf.placeholder(dtype=tf.float32, shape=[None, 480, 640, 1], name='input')}
+    features = {'depth': tf.placeholder(dtype=tf.float32, shape=[None, 480, 640, 1], name='depth')}
+    if model.config['model']['input_format'] == 'rgbd':
+        features.update({'rgb': tf.placeholder(dtype=tf.float32, shape=[None, 480, 640, 3], name='rgb')})
     export_input_fn = tf.estimator.export.build_raw_serving_input_receiver_fn(features)
     # export the saved model
     estimator.export_saved_model(FLAGS.export_path, export_input_fn)

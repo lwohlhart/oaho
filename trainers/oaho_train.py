@@ -85,7 +85,9 @@ class OAHOTrainer(BaseTrain):
         """
         # this should match the input shape of your model
         # TODO: update this to your input used in prediction/serving
-        features = {'input': tf.placeholder(dtype=tf.float32, shape=[None, 480, 640, 1], name='input')}
+        features = {'depth': tf.placeholder(dtype=tf.float32, shape=[None, 480, 640, 1], name='depth')}
+        if self.model.config['model']['input_format'] == 'rgbd':
+            features.update({'rgb': tf.placeholder(dtype=tf.float32, shape=[None, 480, 640, 3], name='rgb')})
         export_input_fn = tf.estimator.export.build_raw_serving_input_receiver_fn(features)
         # export the saved model
         estimator.export_savedmodel(save_location, export_input_fn)

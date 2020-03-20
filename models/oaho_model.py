@@ -10,6 +10,7 @@ from utils.oaho_visualization import OAHODetectionVisualizer
 FLAGS = tf.app.flags.FLAGS
 
 class OAHOModel(BaseModel):
+    NUM_SEGMENTATION_CLASSES = 3
     def __init__(self, config: dict) -> None:
         """
         :param config: global configuration
@@ -29,8 +30,12 @@ class OAHOModel(BaseModel):
         # set flag if the model is currently training
         is_training = mode == tf.estimator.ModeKeys.TRAIN
 
+        if self.config['model']['input_format'] == 'rgbd':
+            input_tensor = tf.concat((features['rgb'], features['depth']), axis=3)
+        elif self.config['model']['input_format'] == 'd':
+            input_tensor = features['depth']
         # initialise model architecture
-        seg_output, pos_output, cos_output, sin_output, width = self._create_model(features['input'], is_training)
+        seg_output, pos_output, cos_output, sin_output, width = self._create_model(input_tensor, is_training)
         segmentation_classes = tf.argmax(input=seg_output, axis=3, output_type=tf.int32)
         # TODO: update model predictions
 
@@ -83,7 +88,9 @@ class OAHOModel(BaseModel):
         # specify some class weightings
         # class_priors = np.array([0.821, 0.016, 0.1556, 0.0074])
         # segmentation_class_weights  = (len(class_priors) * (1.0/class_priors)/np.sum(1.0/class_priors))
-        segmentation_class_weights = tf.constant([0.02373397, 1.2178494 , 0.12522873, 2.6331879 ]) # tf.constant([1, 5, 1, 5])
+        # segmentation_class_weights = tf.constant([0.02373397, 1.2178494 , 0.12522873, 2.6331879 ]) # tf.constant([1, 5, 1, 5])
+
+        segmentation_class_weights = tf.constant([0.01837577, 0.94290681, 2.03871742]) # background, hand, object
 
         # specify the weights for each sample in the batch (without having to compute the onehot label matrix)
         segmentation_weights_labels = tf.gather(segmentation_class_weights, labels['seg'])
@@ -93,8 +100,8 @@ class OAHOModel(BaseModel):
         # try this; to counteract class imbalance  
         segmentation_weights = tf.maximum(segmentation_weights_labels, segmentation_weights_prediction)
 
-        seg_loss = tf.losses.sparse_softmax_cross_entropy(labels=labels['seg'], logits=seg_output, weights=segmentation_weights)
-        # seg_loss = tf.losses.sparse_softmax_cross_entropy(labels=labels['seg'], logits=seg_output)
+        #seg_loss = tf.losses.sparse_softmax_cross_entropy(labels=labels['seg'], logits=seg_output, weights=segmentation_weights)
+        seg_loss = tf.losses.sparse_softmax_cross_entropy(labels=labels['seg'], logits=seg_output)
 
         # tf.print(labels['grasps'], output_stream=sys.stdout)
         # print(labels['grasps'])
@@ -139,7 +146,7 @@ class OAHOModel(BaseModel):
         width_quality_masked = tf.image.hsv_to_rgb(width_quality_masked)
 
         images = {
-            'input': tf.summary.image('input', features['input']),
+            'depth': tf.summary.image('depth', features['depth']),
             'segmentation': tf.summary.image('segmentation', segmentation_image),
             'quality': tf.summary.image('quality', quality),
             'angle_sin': tf.summary.image('angle_sin', sin_output),
@@ -149,6 +156,10 @@ class OAHOModel(BaseModel):
             'angle_quality_masked': tf.summary.image('angle_quality_masked', angle_quality_masked),
             'width_quality_masked': tf.summary.image('width_quality_masked', width_quality_masked)
         }
+        if self.config['model']['input_format'] == 'rgbd':
+            images.update({
+                'rgb': tf.summary.image('rgb', features['rgb'])
+            })
 
 	    # tf.summary.image('segmentation', tf.image.hsv_to_rgb(predictions['segmentation'] / 4.0))
         # tf.summary.image('segmentation', tf.cast(predictions['segmentation'], tf.float32))
@@ -158,10 +169,10 @@ class OAHOModel(BaseModel):
         if mode == tf.estimator.ModeKeys.EVAL:
             # TODO: update evaluation metrics
             # output eval images
-            eval_summary_hook = tf.train.SummarySaverHook(save_steps=1, summary_op=tf.summary.merge_all(), output_dir= FLAGS.job_dir + "/eval_core")
+            eval_summary_hook = tf.train.SummarySaverHook(save_steps=1, summary_op=tf.summary.merge_all(), output_dir= FLAGS.job_dir + "/eval")
             summaries_dict = {
                 'val_mean_iou': tf.metrics.mean_iou(
-                    labels['seg'], predictions=predictions['segmentation'], num_classes=4
+                    labels['seg'], predictions=predictions['segmentation'], num_classes=OAHOModel.NUM_SEGMENTATION_CLASSES
                 )
             }
             # summaries_dict.update(losses_dict)
@@ -182,7 +193,7 @@ class OAHOModel(BaseModel):
                                                                                     'detection_grasps' : detection_grasps
                                                                                     }))
 
-            normalized_depth = tf.image.convert_image_dtype(features['input'] / tf.reduce_max(features['input'], axis=[1,2], keepdims=True) , dtype=tf.uint8)
+            normalized_depth = tf.image.convert_image_dtype(features['depth'] / tf.reduce_max(features['depth'], axis=[1,2], keepdims=True) , dtype=tf.uint8)
             summaries_dict.update(detection_visualizer.get_estimator_eval_metric_ops({
                                                                                 'image_id': labels['id'],
                                                                                 'depth': normalized_depth,
@@ -321,7 +332,7 @@ class OAHOModel(BaseModel):
         # ===================================================================================================
         # Output layers
         seg_head = kl.Conv2D(32, kernel_size=2, padding='same', name='seg_head_1', activation='relu')(x)
-        seg_output = kl.Conv2D(4, kernel_size=2, padding='same', name='seg_out')(seg_head)
+        seg_output = kl.Conv2D(NUM_SEGMENTATION_CLASSES, kernel_size=2, padding='same', name='seg_out')(seg_head)
 
         grasp_head = kl.Conv2D(32, kernel_size=2, padding='same', name='grasp_head_1', activation='relu')(x)
         pos_output = kl.Conv2D(1, kernel_size=2, padding='same', name='pos_out')(grasp_head)
