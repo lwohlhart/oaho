@@ -84,24 +84,26 @@ class OAHOModel(BaseModel):
                 mode, predictions=predictions, export_outputs=export_outputs
             )
 
-        # calculate loss
-        # specify some class weightings
-        # class_priors = np.array([0.821, 0.016, 0.1556, 0.0074])
-        # segmentation_class_weights  = (len(class_priors) * (1.0/class_priors)/np.sum(1.0/class_priors))
-        # segmentation_class_weights = tf.constant([0.02373397, 1.2178494 , 0.12522873, 2.6331879 ]) # tf.constant([1, 5, 1, 5])
+        if self.config['model']['use_segmentation']:
+            # calculate loss
+            # specify some class weightings
+            # class_priors = np.array([0.821, 0.016, 0.1556, 0.0074])
+            # segmentation_class_weights  = (len(class_priors) * (1.0/class_priors)/np.sum(1.0/class_priors))
+            # segmentation_class_weights = tf.constant([0.02373397, 1.2178494 , 0.12522873, 2.6331879 ]) # tf.constant([1, 5, 1, 5])
+            segmentation_class_weights = tf.constant([0.01837577, 0.94290681, 2.03871742]) # background, hand, object
 
-        segmentation_class_weights = tf.constant([0.01837577, 0.94290681, 2.03871742]) # background, hand, object
+            # specify the weights for each sample in the batch (without having to compute the onehot label matrix)
+            segmentation_weights_labels = tf.gather(segmentation_class_weights, labels['seg'])
+            segmentation_weights_prediction = tf.gather(segmentation_class_weights, tf.expand_dims(segmentation_classes,-1))
+            
+            # segmentation_weights = tf.gather(segmentation_class_weights, labels['seg'])
+            # try this; to counteract class imbalance  
+            segmentation_weights = tf.maximum(segmentation_weights_labels, segmentation_weights_prediction)
 
-        # specify the weights for each sample in the batch (without having to compute the onehot label matrix)
-        segmentation_weights_labels = tf.gather(segmentation_class_weights, labels['seg'])
-        segmentation_weights_prediction = tf.gather(segmentation_class_weights, tf.expand_dims(segmentation_classes,-1))
-        
-        # segmentation_weights = tf.gather(segmentation_class_weights, labels['seg'])
-        # try this; to counteract class imbalance  
-        segmentation_weights = tf.maximum(segmentation_weights_labels, segmentation_weights_prediction)
-
-        #seg_loss = tf.losses.sparse_softmax_cross_entropy(labels=labels['seg'], logits=seg_output, weights=segmentation_weights)
-        seg_loss = tf.losses.sparse_softmax_cross_entropy(labels=labels['seg'], logits=seg_output)
+            #seg_loss = tf.losses.sparse_softmax_cross_entropy(labels=labels['seg'], logits=seg_output, weights=segmentation_weights)
+            seg_loss = tf.losses.sparse_softmax_cross_entropy(labels=labels['seg'], logits=seg_output)
+        else:
+            seg_loss = 0
 
         # tf.print(labels['grasps'], output_stream=sys.stdout)
         # print(labels['grasps'])
