@@ -119,7 +119,10 @@ class OAHOModel(BaseModel):
         loss = seg_loss + quality_loss + sin_loss + cos_loss + width_loss
 
         # TODO: update summaries for tensorboard
-        segmentations_class_colors = tf.convert_to_tensor([[0, 0, 0], [255, 0, 0], [0, 255, 0], [0, 0, 255]], dtype=tf.uint8)
+        if OAHOModel.NUM_SEGMENTATION_CLASSES == 3:
+            segmentations_class_colors = tf.convert_to_tensor([[0, 0, 0], [255, 0, 0], [0, 0, 255]], dtype=tf.uint8)
+        else:
+            segmentations_class_colors = tf.convert_to_tensor([[0, 0, 0], [255, 0, 0], [0, 255, 0], [0, 0, 255]], dtype=tf.uint8) # old 4 class format
         segmentation_image = tf.gather(segmentations_class_colors, segmentation_classes)
 
         losses_dict = {
