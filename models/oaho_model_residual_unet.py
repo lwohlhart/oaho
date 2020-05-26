@@ -26,13 +26,14 @@ class OAHOModelResidualUnet(OAHOModel):
             with tf.name_scope(scope):
                 x = input_tensor
                 x = kl.Conv2D(feature_maps, kernel_size=kernel_size, strides=strides, padding='same')(x)
-                x = kl.ReLU()(x)
                 x = kl.BatchNormalization()(x)
+                x = kl.ReLU()(x)
                 x = kl.Conv2D(feature_maps, kernel_size=kernel_size, strides=strides, padding='same')(x)
-                x = kl.ReLU()(x)
                 x = kl.BatchNormalization()(x)
+                x = kl.ReLU()(x)
 
-                x = kl.Concatenate()([x, input_tensor])
+                residual = kl.Conv2D(feature_maps, kernel_size=(1,1))(input_tensor)
+                x = x + residual  # x = kl.Concatenate()([x, input_tensor])
                 pre_pooling = x
                 x = kl.MaxPooling2D(strides=(2, 2), padding='same')(x)
             return x, pre_pooling
@@ -46,11 +47,11 @@ class OAHOModelResidualUnet(OAHOModel):
                 if skip_connection is not None:
                     x = kl.Concatenate()([x, skip_connection])
                 x = kl.Conv2D(feature_maps, kernel_size=kernel_size, strides=strides, padding='same')(x)
-                x = kl.ReLU()(x)
                 x = kl.BatchNormalization()(x)
+                x = kl.ReLU()(x)
                 x = kl.Conv2D(feature_maps, kernel_size=kernel_size, strides=strides, padding='same')(x)
-                x = kl.ReLU()(x)
                 x = kl.BatchNormalization()(x)
+                x = kl.ReLU()(x)
             return x
 
         def dilated_bottleneck(input_tensor: tf.Tensor, feature_maps: int, kernel_size: Tuple[int, int], 
