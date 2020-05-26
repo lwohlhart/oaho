@@ -53,7 +53,14 @@ class TFRecordDataLoader(DataLoader):
         reduce bottle necking of operations on the GPU
         :return: a Dataset function
         """
-        dataset = tf.data.TFRecordDataset(self.file_names)
+        if self.mode == 'train':
+            dataset = tf.data.Dataset.from_tensor_slices(self.file_names).interleave(lambda x:
+                               tf.data.TFRecordDataset(x),
+                               cycle_length=len(self.file_names), 
+                               block_length=1, 
+                               num_parallel_calls=min(len(self.file_names), multiprocessing.cpu_count()))
+        else :
+            dataset = tf.data.TFRecordDataset(self.file_names)
         # create a parallel parsing function based on number of cpu cores
         dataset = dataset.map(
             map_func=self._parse_example, num_parallel_calls=multiprocessing.cpu_count()
