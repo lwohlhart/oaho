@@ -57,7 +57,7 @@ class TFRecordDataLoader(DataLoader):
         # create a parallel parsing function based on number of cpu cores
         dataset = dataset.map(
             map_func=self._parse_example, num_parallel_calls=multiprocessing.cpu_count()
-        )
+        ).filter(self._filter_fn)
 
         # only shuffle training data
         if self.mode == 'train':
@@ -183,6 +183,9 @@ class TFRecordDataLoader(DataLoader):
     #        example = tf.image.random_flip_up_down(example)
     #    return tf.image.random_flip_left_right(example)
     #
+
+    def _filter_fn(self, feature, target):
+        return tf.reduce_any(target['quality'] > 0)
 
     def __len__(self) -> int:
         """
