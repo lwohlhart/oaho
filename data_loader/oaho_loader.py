@@ -5,6 +5,8 @@ import multiprocessing
 from typing import Tuple, Dict
 import random
 import numpy as np
+from glob import glob
+
 FLAGS = tf.app.flags.FLAGS
 
 def draw_grasp_images(grasps, shape):
@@ -46,6 +48,17 @@ class TFRecordDataLoader(DataLoader):
             self.file_names = FLAGS.test_files
             self.batch_size = 1
 
+        fns = []
+        for fn in self.file_names:
+           if '*' not in fn:
+               fns.append(fn)
+           else:
+               fns.extend(glob(fn))
+        #self.file_names = [fn if '*' not in fn else ...glob(fn) for fn in self.file_names]
+        self.file_names = fns
+        tf.logging.warn(self.file_names)
+
+
     def input_fn(self) -> tf.data.Dataset:
         """
         Create a tf.Dataset using tfrecords as inputs, use parallel
@@ -53,8 +66,12 @@ class TFRecordDataLoader(DataLoader):
         reduce bottle necking of operations on the GPU
         :return: a Dataset function
         """
+
+        random.shuffle(self.file_names)
+        tf.logging.info(self.file_names)
+
         if self.mode == 'train':
-            dataset = tf.data.Dataset.from_tensor_slices(self.file_names).interleave(lambda x:
+            dataset = tf.data.Dataset.from_tensor_slices(self.file_names).shuffle(buffer_size=30).interleave(lambda x:
                                tf.data.TFRecordDataset(x),
                                cycle_length=len(self.file_names), 
                                block_length=1, 
@@ -124,8 +141,7 @@ class TFRecordDataLoader(DataLoader):
             dim = (h,w,1)
 
             depth = tf.reshape(parsed_features['depth'], dim) - self.config['depth_mean']
-            seg = tf.cast(tf.image.decode_image(parsed_features['segmentation/raw']), dtype=tf.int32)
-            seg.set_shape(depth.shape)
+            seg = tf.cast(tf.image.decode_png(parsed_features['segmentation/raw']), dtype=tf.int32)
 
             if FLAGS.grasp_annotation_format == 'grasp_images':
                 quality =  tf.reshape(parsed_features['quality'], dim)
@@ -192,7 +208,8 @@ class TFRecordDataLoader(DataLoader):
     #
 
     def _filter_fn(self, feature, target):
-        return tf.reduce_any(target['quality'] > 0)
+        # return tf.reduce_any(target['quality'] > 0)
+        return tf.logical_and(tf.reduce_any(target['quality'] > 0), tf.equal(tf.shape(target['seg'])[0], 480))
 
     def __len__(self) -> int:
         """
